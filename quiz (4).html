@@ -1,0 +1,1862 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Daniel · Quiz</title>
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;600;700&family=Crimson+Pro:ital,wght@0,300;0,400;1,300&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root { --red: #B91C1C; --gold: #D4A017; --cream: #FAF6EE; --text: #1a1208; --text-muted: #6b5a3a; }
+  html, body { min-height: 100vh; background: var(--cream); font-family: 'Crimson Pro', Georgia, serif; color: var(--text); overflow-x: hidden; }
+  body::before { content: ''; position: fixed; inset: 0; background-image: radial-gradient(ellipse at 20% 20%, rgba(212,160,23,0.08) 0%, transparent 60%), radial-gradient(ellipse at 80% 80%, rgba(185,28,28,0.06) 0%, transparent 60%); pointer-events: none; z-index: 0; }
+  .watermark { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(-18deg); width: 480px; height: 480px; opacity: 0.04; pointer-events: none; z-index: 0; background-image: url('1780025373164_image.png'); background-size: contain; background-repeat: no-repeat; background-position: center; }
+
+  /* COUNTDOWN */
+  #countdown-overlay { position: fixed; inset: 0; background: rgba(10,6,2,0.72); z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1rem; animation: overlayIn 0.5s ease forwards; }
+  #countdown-overlay.hiding { animation: overlayOut 0.6s ease forwards; }
+  .countdown-label { font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 6px; color: rgba(212,160,23,0.7); text-transform: uppercase; animation: fadeUp 0.5s ease 0.2s both; }
+  .countdown-num { font-family: 'Cinzel', serif; font-size: clamp(6rem, 20vw, 10rem); font-weight: 700; color: #fff; line-height: 1; text-shadow: 0 0 60px rgba(212,160,23,0.4); }
+  .countdown-num.tick { animation: tick 0.4s ease; }
+  .countdown-chapter { font-size: 1.1rem; font-style: italic; color: rgba(255,255,255,0.45); letter-spacing: 1px; animation: fadeUp 0.5s ease 0.35s both; }
+  .countdown-ring { position: absolute; width: 220px; height: 220px; border-radius: 50%; border: 1px solid rgba(212,160,23,0.15); animation: ringPulse 1s ease infinite; pointer-events: none; }
+
+  /* PAGE */
+  .page { position: relative; z-index: 1; min-height: 100vh; display: flex; flex-direction: column; align-items: center; padding: 2.5rem 1.5rem 4rem; opacity: 0; transition: opacity 0.5s ease; }
+  .page.visible { opacity: 1; }
+
+  /* TOPBAR */
+  .topbar { width: 100%; max-width: 780px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 2.5rem; padding-bottom: 1rem; border-bottom: 1px solid rgba(212,160,23,0.3); }
+  .topbar-left { display: flex; align-items: center; gap: 0.6rem; }
+  .topbar-left img { height: 36px; }
+  .topbar-left span { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; }
+  .back-btn { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; text-decoration: none; display: flex; align-items: center; gap: 0.4rem; transition: color 0.2s; }
+  .back-btn:hover { color: var(--red); }
+  .back-btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 2; }
+
+  /* TIMER */
+  .timer-wrap { width: 100%; max-width: 780px; margin-bottom: 1rem; display: flex; align-items: center; gap: 0.75rem; }
+  .timer-track { flex: 1; height: 5px; background: rgba(212,160,23,0.15); border-radius: 3px; overflow: hidden; }
+  .timer-fill { height: 100%; width: 100%; background: linear-gradient(90deg, var(--red), var(--gold)); border-radius: 3px; transition: width 1s linear, background 0.5s linear; }
+  .timer-fill.warning { background: linear-gradient(90deg, #7f1d1d, var(--red)); }
+  .timer-num { font-family: 'Cinzel', serif; font-size: 11px; font-weight: 600; color: var(--gold); min-width: 22px; text-align: right; transition: color 0.3s; }
+  .timer-num.warning { color: var(--red); }
+
+  /* PROGRESS */
+  .progress-wrap { width: 100%; max-width: 780px; margin-bottom: 2.5rem; }
+  .progress-info { display: flex; justify-content: space-between; margin-bottom: 0.5rem; }
+  .progress-info span { font-family: 'Cinzel', serif; font-size: 10px; letter-spacing: 2px; color: var(--text-muted); text-transform: uppercase; }
+  .progress-track { width: 100%; height: 3px; background: rgba(212,160,23,0.15); border-radius: 2px; overflow: hidden; }
+  .progress-fill { height: 100%; background: linear-gradient(90deg, var(--red), var(--gold)); border-radius: 2px; transition: width 0.5s ease; }
+
+  /* QUESTION */
+  .q-card { width: 100%; max-width: 780px; background: rgba(255,255,255,0.7); border: 1px solid rgba(212,160,23,0.25); border-radius: 4px; padding: 2.5rem 2.5rem 2rem; margin-bottom: 1.5rem; animation: fadeUp 0.45s ease both; }
+  .q-label { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 4px; color: var(--gold); text-transform: uppercase; margin-bottom: 1.25rem; }
+  .q-text { font-size: 1.35rem; font-weight: 400; line-height: 1.6; color: var(--text); }
+
+  /* OPTIONS */
+  .options { width: 100%; max-width: 780px; display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 2rem; }
+  .opt-btn { background: rgba(255,255,255,0.65); border: 1px solid rgba(212,160,23,0.25); border-radius: 4px; padding: 1.1rem 1.25rem; text-align: left; cursor: pointer; display: flex; align-items: flex-start; gap: 0.9rem; transition: border-color 0.2s, background 0.2s, transform 0.15s; font-family: 'Crimson Pro', Georgia, serif; animation: fadeUp 0.45s ease both; }
+  .opt-btn:nth-child(1){animation-delay:0.05s} .opt-btn:nth-child(2){animation-delay:0.1s} .opt-btn:nth-child(3){animation-delay:0.15s} .opt-btn:nth-child(4){animation-delay:0.2s}
+  .opt-btn:hover:not(:disabled) { border-color: rgba(212,160,23,0.55); background: rgba(255,255,255,0.9); transform: translateY(-2px); }
+  .opt-letter { font-family: 'Cinzel', serif; font-size: 0.7rem; font-weight: 600; color: var(--gold); background: rgba(212,160,23,0.1); border: 1px solid rgba(212,160,23,0.25); border-radius: 2px; width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 1px; transition: background 0.2s, color 0.2s, border-color 0.2s; }
+  .opt-text { font-size: 1rem; line-height: 1.5; color: var(--text); }
+  .opt-btn.correct { border-color: #16a34a; background: rgba(22,163,74,0.08); }
+  .opt-btn.correct .opt-letter { background: #16a34a; color: white; border-color: #16a34a; }
+  .opt-btn.wrong { border-color: var(--red); background: rgba(185,28,28,0.07); }
+  .opt-btn.wrong .opt-letter { background: var(--red); color: white; border-color: var(--red); }
+  .opt-btn.reveal-correct { border-color: #16a34a; background: rgba(22,163,74,0.06); }
+  .opt-btn.reveal-correct .opt-letter { background: rgba(22,163,74,0.15); color: #16a34a; border-color: #16a34a; }
+  .opt-btn:disabled { cursor: default; transform: none !important; }
+
+  /* FEEDBACK */
+  .feedback { width: 100%; max-width: 780px; padding: 0.9rem 1.25rem; border-radius: 4px; font-size: 1rem; font-style: italic; margin-bottom: 1.5rem; display: none; animation: fadeUp 0.3s ease both; }
+  .feedback.correct-fb { display: block; background: rgba(22,163,74,0.08); border: 1px solid rgba(22,163,74,0.3); color: #15803d; }
+  .feedback.wrong-fb { display: block; background: rgba(185,28,28,0.07); border: 1px solid rgba(185,28,28,0.25); color: var(--red); }
+
+  /* NEXT BTN */
+  .next-btn { font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: white; background: var(--red); border: none; padding: 0.9rem 2.5rem; border-radius: 2px; cursor: pointer; display: none; transition: background 0.2s, transform 0.15s; }
+  .next-btn:hover { background: #991b1b; transform: translateY(-1px); }
+  .next-btn.visible { display: inline-block; }
+
+  /* RESULTS */
+  #results-screen { display: none; position: relative; z-index: 1; min-height: 100vh; flex-direction: column; align-items: center; justify-content: center; padding: 3rem 1.5rem; text-align: center; }
+  #results-screen.visible { display: flex; }
+  .results-ornament { font-family: 'Cinzel', serif; font-size: 9px; letter-spacing: 5px; color: var(--gold); text-transform: uppercase; margin-bottom: 1rem; }
+  .results-title { font-family: 'Cinzel', serif; font-size: clamp(2rem, 6vw, 3.5rem); font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
+  .results-score { font-family: 'Cinzel', serif; font-size: clamp(4rem, 12vw, 7rem); font-weight: 700; color: var(--red); line-height: 1; margin: 1rem 0; }
+  .results-sub { font-size: 1.2rem; font-style: italic; color: var(--text-muted); margin-bottom: 0.5rem; }
+  .results-message { font-size: 1rem; color: var(--text-muted); max-width: 400px; line-height: 1.7; margin-bottom: 2.5rem; }
+  .results-divider { display: flex; align-items: center; gap: 1rem; width: 200px; margin: 1.5rem auto; }
+  .results-divider::before, .results-divider::after { content: ''; flex: 1; height: 1px; background: linear-gradient(to right, transparent, var(--gold)); }
+  .results-divider::after { background: linear-gradient(to left, transparent, var(--gold)); }
+  .results-divider-diamond { width: 6px; height: 6px; background: var(--gold); transform: rotate(45deg); }
+  .results-actions { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; }
+  .btn-primary { font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: white; background: var(--red); border: none; padding: 0.9rem 2rem; border-radius: 2px; cursor: pointer; transition: background 0.2s, transform 0.15s; text-decoration: none; display: inline-block; }
+  .btn-primary:hover { background: #991b1b; transform: translateY(-1px); }
+  .btn-secondary { font-family: 'Cinzel', serif; font-size: 11px; letter-spacing: 3px; text-transform: uppercase; color: var(--text-muted); background: transparent; border: 1px solid rgba(212,160,23,0.4); padding: 0.9rem 2rem; border-radius: 2px; cursor: pointer; transition: border-color 0.2s, color 0.2s, transform 0.15s; text-decoration: none; display: inline-block; }
+  .btn-secondary:hover { border-color: var(--gold); color: var(--text); transform: translateY(-1px); }
+
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes overlayIn { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes overlayOut { from { opacity: 1; } to { opacity: 0; } }
+  @keyframes tick { 0% { transform: scale(1.25); opacity: 0.5; } 100% { transform: scale(1); opacity: 1; } }
+  @keyframes ringPulse { 0%, 100% { transform: scale(1); opacity: 0.4; } 50% { transform: scale(1.08); opacity: 0.15; } }
+  @media (max-width: 600px) { .options { grid-template-columns: 1fr; } .q-card { padding: 1.75rem 1.25rem 1.5rem; } }
+</style>
+</head>
+<body>
+<div class="watermark"></div>
+
+<div id="countdown-overlay">
+  <div class="countdown-ring"></div>
+  <p class="countdown-label">Prepárate</p>
+  <div class="countdown-num" id="countdown-num">5</div>
+  <p class="countdown-chapter" id="countdown-chapter">Daniel · Capítulo I</p>
+</div>
+
+<div class="page" id="quiz-page">
+  <div class="topbar">
+    <div class="topbar-left">
+      <img src="1780025373164_image.png" alt="Conquistadores" onerror="this.style.display='none'">
+      <span id="topbar-cap">Capítulo I</span>
+    </div>
+    <a href="index.html" class="back-btn">
+      <svg viewBox="0 0 24 24"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+      Capítulos
+    </a>
+  </div>
+
+  <div class="timer-wrap">
+    <div class="timer-track"><div class="timer-fill" id="timer-fill"></div></div>
+    <span class="timer-num" id="timer-num">20</span>
+  </div>
+
+  <div class="progress-wrap">
+    <div class="progress-info">
+      <span id="progress-label">Pregunta 1 de 20</span>
+      <span id="score-label">0 correctas</span>
+    </div>
+    <div class="progress-track"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <div class="q-card" id="q-card">
+    <p class="q-label" id="q-label">Pregunta 1</p>
+    <p class="q-text" id="q-text"></p>
+  </div>
+
+  <div class="options" id="options"></div>
+  <div class="feedback" id="feedback"></div>
+  <button class="next-btn" id="next-btn" onclick="nextQuestion()">Siguiente pregunta →</button>
+</div>
+
+<div id="results-screen">
+  <p class="results-ornament">Resultado final</p>
+  <h2 class="results-title" id="results-title">Daniel · Capítulo I</h2>
+  <div class="results-divider"><div class="results-divider-diamond"></div></div>
+  <div class="results-score" id="results-score"></div>
+  <p class="results-sub" id="results-sub"></p>
+  <p class="results-message" id="results-message"></p>
+  <div class="results-actions">
+    <button class="btn-primary" onclick="restartQuiz()">Intentar de nuevo</button>
+    <a class="btn-secondary" href="index.html">Ver capítulos</a>
+  </div>
+</div>
+
+<script>
+const CAPITULOS = {
+  "1": {
+    "titulo": "Capítulo 1",
+    "subtitulo": "Daniel en Babilonia",
+    "preguntas": [
+      {
+        "id": 1,
+        "pregunta": "¿En qué año del reinado de Joacim llegó Nabucodonosor a Jerusalén?",
+        "opciones": [
+          "Año primero",
+          "Año decimoquinto",
+          "Año tercero",
+          "Año séptimo"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 2,
+        "pregunta": "¿Qué entregó el Señor en las manos de Nabucodonosor?",
+        "opciones": [
+          "Le entregó a Daniel, Misael, Ananías y Azarías",
+          "Le entregó abundante comida para su pueblo",
+          "Le entregó 10 candelabros de oro",
+          "Le entregó a Joacim y parte de los utensilios de la casa de Dios"
+        ],
+        "correcta": 3
+      },
+      {
+        "id": 3,
+        "pregunta": "¿Cómo se llamaba el jefe de los eunucos? (Daniel 1:3)",
+        "opciones": [
+          "Melsar",
+          "Aspenaz",
+          "Belsasar",
+          "Arioc"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 4,
+        "pregunta": "¿Qué le dijo el rey a Aspenaz?",
+        "opciones": [
+          "Que trajese a los hijos de Israel, del linaje real de los príncipes",
+          "Que trajese a los hijos de Etiopía, en quienes no hubiere tacha alguna",
+          "Que trajese a los hijos de Persia, en quienes hubiera tacha abundante",
+          "Que trajese a los nietos de Israel, del linaje de David"
+        ],
+        "correcta": 0
+      },
+      {
+        "id": 5,
+        "pregunta": "¿Qué comida señaló el rey que los muchachos debían comer cada día?",
+        "opciones": [
+          "La provisión de las legumbres del rey, y del agua que él bebía",
+          "La provisión de la comida del rey, y del vino que él bebía",
+          "La provisión de peces y manjares del rey, y del jugo que él bebía",
+          "La provisión de comida del rey, y de las vestiduras que él usaba"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 6,
+        "pregunta": "¿Entre los muchachos elegidos de los hijos de Judá estaban...?",
+        "opciones": [
+          "Josué, Caleb, Moisés e Isaac",
+          "Belsasar, Joel, Jonás y Miqueas",
+          "Baal, Felipe, Jacobo, Andrés",
+          "Daniel, Misael, Ananías y Azarías"
+        ],
+        "correcta": 3
+      },
+      {
+        "id": 7,
+        "pregunta": "¿Qué nombres les puso el jefe de los eunucos a Daniel, Misael, Ananías y Azarías?",
+        "opciones": [
+          "A Daniel, Beltasar; a Ananías, Sadrac; a Misael, Micael; y a Azarías, Abed-jade",
+          "A Daniel, Belsasar; a Ananías, Sadrac; a Misael, Mesac; y a Azarías, Abed-nego",
+          "A Daniel, Beltsasar; a Ananías, Sadrac; a Misael, Mesac; y a Azarías, Abed-nego",
+          "A Daniel, Mesac; a Ananías, Sadrac; a Misael, Beltsasar; y a Azarías, Abed-nego"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 8,
+        "pregunta": "¿Qué propuso Daniel en su corazón?",
+        "opciones": [
+          "No descansar hasta regresar del cautiverio",
+          "No contaminarse de la porción de la comida del rey",
+          "Tomar moderadamente el vino del rey",
+          "No arrodillarse ante la estatua que Nabucodonosor había levantado"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 9,
+        "pregunta": "¿Qué le pidió Daniel al jefe de los eunucos?",
+        "opciones": [
+          "Que no le obligase a contaminarse",
+          "Que lo obligase a contaminarse",
+          "Que le diera vestidos púrpuras",
+          "Ver al faraón para interpretar su sueño"
+        ],
+        "correcta": 0
+      },
+      {
+        "id": 10,
+        "pregunta": "¿Cómo temía el jefe de los eunucos que quedaran los rostros de los muchachos?",
+        "opciones": [
+          "Que quedaran fláccidos a diferencia de los demás",
+          "Que quedaran pálidos a diferencia de los demás",
+          "Que quedaran arrugados a diferencia de los demás",
+          "Que quedaran peor a diferencia de los demás"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 11,
+        "pregunta": "¿A quién puso el jefe de los eunucos sobre Daniel, Ananías, Misael y Azarías?",
+        "opciones": [
+          "Un escriba",
+          "Un capitán",
+          "Un guardia",
+          "Un sátrapa"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 12,
+        "pregunta": "¿Qué pidió Daniel que se les diera de comer durante la prueba?",
+        "opciones": [
+          "Pan integral y vino",
+          "Legumbres para comer y agua para beber",
+          "Frutas de la región y agua",
+          "Hierbas amargas y pan sin levadura"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 13,
+        "pregunta": "¿Cuál era el propósito de la prueba que sugirió Daniel?",
+        "opciones": [
+          "Ver quién era más fuerte físicamente",
+          "Comparar sus rostros con los de los jóvenes que comían de la ración del rey",
+          "Demostrar que podían ayunar por mucho tiempo",
+          "Saber si podían aprender más rápido el idioma de los caldeos"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 14,
+        "pregunta": "¿Qué hizo Melsar después de escuchar la propuesta de Daniel?",
+        "opciones": [
+          "Les pidió que consultaran al rey",
+          "Les permitió comer legumbres solo los fines de semana",
+          "Se negó por miedo a perder su cabeza",
+          "Consintió con ellos y probó con ellos diez días"
+        ],
+        "correcta": 3
+      },
+      {
+        "id": 15,
+        "pregunta": "¿Cómo pareció el rostro de Daniel y sus amigos después de los 10 días?",
+        "opciones": [
+          "Igual de cansado que el de los demás",
+          "Más pálido pero con más sabiduría",
+          "Mejor y más robusto que el de los otros que comían de la comida real",
+          "No hubo una diferencia notable a simple vista"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 16,
+        "pregunta": "¿Qué se llevaba Melsar? (Daniel 1:16)",
+        "opciones": [
+          "La porción de la comida de ellos y el vino que habían de beber",
+          "La porción de legumbres de ellos y el agua que habían de beber",
+          "Las túnicas de ellos y el jugo que habían de beber",
+          "A los hebreos delante del rey"
+        ],
+        "correcta": 0
+      },
+      {
+        "id": 17,
+        "pregunta": "¿Qué les dio Dios a los cuatro jóvenes hebreos? (Daniel 1:17)",
+        "opciones": [
+          "Riquezas y honores en Babilonia",
+          "Conocimiento e inteligencia en todas las letras y ciencias",
+          "La capacidad de gobernar provincias enteras",
+          "Una larga vida y muchos descendientes"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 18,
+        "pregunta": "¿Además de la inteligencia, qué don especial recibió Daniel? (Daniel 1:17)",
+        "opciones": [
+          "El don de lenguas extranjeras",
+          "Entendimiento en toda visión y sueños",
+          "La fuerza de un guerrero",
+          "El don de profetizar el futuro de los reyes"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 19,
+        "pregunta": "¿Qué sucedió cuando se cumplieron los días fijados por el rey para traer a los jóvenes? (Daniel 1:18)",
+        "opciones": [
+          "El jefe de los eunucos los presentó delante de Nabucodonosor",
+          "Los jóvenes intentaron huir de palacio",
+          "El rey se olvidó de los jóvenes",
+          "Fueron enviados de regreso a Judá"
+        ],
+        "correcta": 0
+      },
+      {
+        "id": 20,
+        "pregunta": "¿Quién habló con los jóvenes y cómo los halló?",
+        "opciones": [
+          "El rey habló con ellos y los halló peores que los otros jóvenes",
+          "El jefe de los eunucos habló con ellos y los halló comiendo legumbres",
+          "El rey habló con ellos y no fueron hallados otros como los 4 jóvenes",
+          "El rey no habló con ellos, los dejó en cautiverio 4 años más"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 21,
+        "pregunta": "¿Después de consultarles, cómo halló el rey a los jóvenes?",
+        "opciones": [
+          "Los halló 11 veces mejores que todos los magos y astrólogos de su reino",
+          "Los halló 9 veces mejores que todos los magos y astrólogos de su reino",
+          "Los halló 10 veces peores que todos los magos y astrólogos de su reino",
+          "Los halló 10 veces mejores que todos los magos y astrólogos de su reino"
+        ],
+        "correcta": 3
+      },
+      {
+        "id": 22,
+        "pregunta": "¿Hasta qué tiempo continuó Daniel en su cargo? (Daniel 1:21)",
+        "opciones": [
+          "Hasta el año tercero del rey Nabucodonosor",
+          "Hasta el año primero del rey Ciro",
+          "Hasta el año primero del rey Cirenio",
+          "Hasta que regresó a Jerusalén"
+        ],
+        "correcta": 1
+      }
+    ]
+  },
+  "2": {
+    "titulo": "Capítulo 2",
+    "subtitulo": "El sueño del rey",
+    "preguntas": [
+      {
+        "id": 1,
+        "pregunta": "¿En qué año del reinado de Nabucodonosor tuvo él los sueños? (Daniel 2:1)",
+        "opciones": [
+          "En el primer año",
+          "En el segundo año",
+          "En el tercer año",
+          "En el séptimo año"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 2,
+        "pregunta": "¿Qué le pasó a Nabucodonosor después de tener los sueños? (Daniel 2:1)",
+        "opciones": [
+          "Se durmió profundamente",
+          "Se turbó su espíritu y se le fue el sueño",
+          "Llamó a Daniel inmediatamente",
+          "Escribió el sueño en un pergamino"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 3,
+        "pregunta": "¿A quiénes hizo llamar el rey para que le explicaran sus sueños? (Daniel 2:2)",
+        "opciones": [
+          "A magos, astrólogos, encantadores y caldeos",
+          "A sacerdotes, profetas, levitas y escribas",
+          "A soldados, capitanes, sátrapas y gobernadores",
+          "A Daniel, Ananías, Misael y Azarías"
+        ],
+        "correcta": 0
+      },
+      {
+        "id": 4,
+        "pregunta": "¿Qué respondieron los caldeos al rey cuando les pidió el sueño? (Daniel 2:4)",
+        "opciones": [
+          "¡Rey, para siempre vive! Cuenta el sueño a tus siervos, y te daremos la interpretación",
+          "No hay hombre sobre la tierra que pueda declarar el asunto del rey",
+          "El asunto lo olvidamos, pero si nos lo dices te daremos la interpretación",
+          "Nosotros no podemos revelar misterios, solo los dioses pueden"
+        ],
+        "correcta": 0
+      },
+      {
+        "id": 5,
+        "pregunta": "¿Qué dijo el rey que haría si no le decían el sueño y su interpretación? (Daniel 2:5)",
+        "opciones": [
+          "Los echaría en el foso de los leones",
+          "Los echaría en el horno de fuego ardiente",
+          "Serían hechos pedazos y sus casas convertidas en estercoleros",
+          "Serían desterrados de Babilonia para siempre"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 6,
+        "pregunta": "¿Qué dijo el rey que daría si le decían el sueño y su interpretación? (Daniel 2:6)",
+        "opciones": [
+          "Dones, favores y gran honra",
+          "La mitad de su reino",
+          "Oro, plata y vestidos de púrpura",
+          "Tierras y cargos en el palacio"
+        ],
+        "correcta": 0
+      },
+      {
+        "id": 7,
+        "pregunta": "¿Qué dijeron los caldeos que era difícil y que ningún hombre podía revelar? (Daniel 2:10-11)",
+        "opciones": [
+          "El sueño del árbol grande",
+          "El asunto que el rey demandaba, que solo los dioses podían revelar",
+          "El significado de las palabras escritas en la pared",
+          "La interpretación de los sueños del faraón"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 8,
+        "pregunta": "¿Qué mandó el rey con ira cuando los sabios no pudieron ayudarlo? (Daniel 2:12)",
+        "opciones": [
+          "Que los encerraran en prisión por un año",
+          "Que los echaran al foso de los leones",
+          "Que mataran a todos los sabios de Babilonia",
+          "Que los desterraran del reino"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 9,
+        "pregunta": "¿Con quién habló Daniel sabia y prudentemente para preguntar la causa del edicto? (Daniel 2:14)",
+        "opciones": [
+          "Con Aspenaz, jefe de los eunucos",
+          "Con Arioc, capitán de la guardia del rey",
+          "Con Nabucodonosor directamente",
+          "Con Beltsasar, el jefe de los magos"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 10,
+        "pregunta": "¿Qué pidió Daniel al rey cuando entró a verlo? (Daniel 2:16)",
+        "opciones": [
+          "Que le concediera tiempo para dar la interpretación",
+          "Que perdonara a todos los sabios de Babilonia",
+          "Que le dijera el sueño y él lo interpretaría",
+          "Que pusiera a sus compañeros como gobernadores"
+        ],
+        "correcta": 0
+      },
+      {
+        "id": 11,
+        "pregunta": "¿Para qué reunió Daniel a Ananías, Misael y Azarías después de hablar con el rey? (Daniel 2:17-18)",
+        "opciones": [
+          "Para estudiar juntos el libro de los magos",
+          "Para que pidieran misericordias del Dios del cielo sobre el misterio",
+          "Para huir juntos de Babilonia esa noche",
+          "Para preparar la respuesta que darían al rey"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 12,
+        "pregunta": "¿Cuándo le fue revelado el secreto a Daniel? (Daniel 2:19)",
+        "opciones": [
+          "En visión de noche",
+          "Mientras oraba en el templo",
+          "Por medio de un ángel que se le apareció de día",
+          "Mientras leía los libros de los caldeos"
+        ],
+        "correcta": 0
+      },
+      {
+        "id": 13,
+        "pregunta": "¿De qué material era la cabeza de la imagen que vio Nabucodonosor en su sueño? (Daniel 2:32)",
+        "opciones": [
+          "De plata",
+          "De bronce",
+          "De oro fino",
+          "De hierro"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 14,
+        "pregunta": "¿De qué materiales eran el pecho y los brazos de la imagen? (Daniel 2:32)",
+        "opciones": [
+          "De oro",
+          "De plata",
+          "De bronce",
+          "De hierro"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 15,
+        "pregunta": "¿De qué material era el vientre y los muslos de la imagen? (Daniel 2:32)",
+        "opciones": [
+          "De oro",
+          "De plata",
+          "De bronce",
+          "De hierro"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 16,
+        "pregunta": "¿De qué estaban hechos los pies de la imagen? (Daniel 2:33)",
+        "opciones": [
+          "De oro y plata",
+          "De bronce y barro cocido",
+          "En parte de hierro y en parte de barro cocido",
+          "De hierro puro"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 17,
+        "pregunta": "¿Cómo se desprendió la piedra que hirió a la imagen? (Daniel 2:34)",
+        "opciones": [
+          "La cortó mano de hombre",
+          "Se desprendió sin que la cortara mano alguna",
+          "La lanzó un ángel desde el cielo",
+          "La tiró Nabucodonosor en su sueño"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 18,
+        "pregunta": "¿En qué se convirtieron los materiales de la imagen después de que la piedra los hirió? (Daniel 2:35)",
+        "opciones": [
+          "En polvo que cayó al río",
+          "Como tamo de las eras del verano que se llevó el viento sin dejar rastro",
+          "En cenizas que cayeron sobre Babilonia",
+          "Se hundieron en la tierra"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 19,
+        "pregunta": "¿Qué se hizo la piedra que hirió a la imagen? (Daniel 2:35)",
+        "opciones": [
+          "Se desmenuzó también",
+          "Se convirtió en un río de agua",
+          "Se hizo un gran monte que llenó toda la tierra",
+          "Subió al cielo delante del rey"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 20,
+        "pregunta": "¿Qué representaba la cabeza de oro según Daniel? (Daniel 2:37-38)",
+        "opciones": [
+          "El reino de los medos y persas",
+          "El reino de Grecia",
+          "El rey Nabucodonosor mismo",
+          "El reino de Dios"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 21,
+        "pregunta": "¿Qué cargo le dio el rey a Daniel después de interpretar el sueño? (Daniel 2:48)",
+        "opciones": [
+          "Jefe de los eunucos",
+          "Gobernador de toda la provincia de Babilonia y jefe supremo de todos los sabios",
+          "Capitán de la guardia real",
+          "Consejero personal del rey"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 22,
+        "pregunta": "¿Qué hizo Daniel con respecto a sus compañeros después de ser engrandecido? (Daniel 2:49)",
+        "opciones": [
+          "Los llevó consigo al palacio del rey",
+          "Los mandó de regreso a Jerusalén",
+          "Solicitó al rey que los pusiera sobre los negocios de la provincia de Babilonia",
+          "Los nombró sus asistentes personales"
+        ],
+        "correcta": 2
+      }
+    ]
+  },
+  "3": {
+    "titulo": "Capítulo 3",
+    "subtitulo": "El horno de fuego",
+    "preguntas": [
+      {
+        "id": 1,
+        "pregunta": "¿De qué material era la estatua que hizo el rey Nabucodonosor? (Daniel 3:1)",
+        "opciones": [
+          "De plata",
+          "De bronce",
+          "De oro",
+          "De hierro y barro"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 2,
+        "pregunta": "¿Cuál era la altura de la estatua que levantó Nabucodonosor? (Daniel 3:1)",
+        "opciones": [
+          "Treinta codos",
+          "Cuarenta y cinco codos",
+          "Sesenta codos",
+          "Setenta codos"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 3,
+        "pregunta": "¿Cuál era la anchura de la estatua? (Daniel 3:1)",
+        "opciones": [
+          "Seis codos",
+          "Diez codos",
+          "Doce codos",
+          "Cuatro codos"
+        ],
+        "correcta": 0
+      },
+      {
+        "id": 4,
+        "pregunta": "¿Dónde levantó Nabucodonosor la estatua? (Daniel 3:1)",
+        "opciones": [
+          "En el palacio de Babilonia",
+          "En el campo de Dura, en la provincia de Babilonia",
+          "En el templo de su dios",
+          "En la puerta principal de la ciudad"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 5,
+        "pregunta": "¿Qué debía hacer todo pueblo al oír el son de los instrumentos de música? (Daniel 3:5)",
+        "opciones": [
+          "Gritar el nombre del rey tres veces",
+          "Postrarse y adorar la estatua de oro",
+          "Traer ofrendas al templo del rey",
+          "Marchar alrededor de la estatua en silencio"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 6,
+        "pregunta": "¿Qué le pasaría a quien no se postrara y adorara la estatua? (Daniel 3:6)",
+        "opciones": [
+          "Sería desterrado del reino",
+          "Sería echado dentro de un horno de fuego ardiente",
+          "Sería hecho pedazos",
+          "Sería echado al foso de los leones"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 7,
+        "pregunta": "¿Quiénes acusaron a Sadrac, Mesac y Abed-nego delante del rey? (Daniel 3:8)",
+        "opciones": [
+          "Los gobernadores de las provincias",
+          "Unos hombres caldeos",
+          "Los sátrapas del reino",
+          "Los magos y astrólogos"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 8,
+        "pregunta": "¿Qué respondieron Sadrac, Mesac y Abed-nego al rey sobre adorar su dios? (Daniel 3:17-18)",
+        "opciones": [
+          "Que necesitaban tiempo para pensarlo",
+          "Que su Dios podía librarlos y que no adorarían la estatua aunque no los librara",
+          "Que obedecerían al rey en todo",
+          "Que ya no adoraban a ningún dios"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 9,
+        "pregunta": "¿Cuántas veces más de lo acostumbrado ordenó Nabucodonosor que calentaran el horno? (Daniel 3:19)",
+        "opciones": [
+          "Tres veces más",
+          "Cinco veces más",
+          "Siete veces más",
+          "Diez veces más"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 10,
+        "pregunta": "¿Qué le pasó a los hombres que echaron a Sadrac, Mesac y Abed-nego al horno? (Daniel 3:22)",
+        "opciones": [
+          "Fueron heridos por las llamas",
+          "La llama del fuego los mató",
+          "Se salvaron porque estaban lejos",
+          "Cayeron desmayados por el calor"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 11,
+        "pregunta": "¿Cuántos hombres vio el rey dentro del horno después de haber echado a los tres? (Daniel 3:25)",
+        "opciones": [
+          "Tres",
+          "Cuatro",
+          "Cinco",
+          "Dos"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 12,
+        "pregunta": "¿A qué era semejante el aspecto del cuarto hombre que vio el rey en el horno? (Daniel 3:25)",
+        "opciones": [
+          "A un ángel con alas de fuego",
+          "A un hijo de los dioses",
+          "A un hombre vestido de blanco",
+          "Al mismo Nabucodonosor"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 13,
+        "pregunta": "¿Qué no había tenido poder sobre los cuerpos de Sadrac, Mesac y Abed-nego? (Daniel 3:27)",
+        "opciones": [
+          "El frío de la noche",
+          "El fuego, ni siquiera el cabello se les había quemado",
+          "El agua del río",
+          "Los soldados del rey"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 14,
+        "pregunta": "¿Qué olor tenían las ropas de los tres jóvenes al salir del horno? (Daniel 3:27)",
+        "opciones": [
+          "Olor a quemado",
+          "Olor a incienso",
+          "Ni siquiera olor de fuego tenían",
+          "Olor a azufre"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 15,
+        "pregunta": "¿Qué decreto promulgó Nabucodonosor después del milagro? (Daniel 3:29)",
+        "opciones": [
+          "Que todos adoraran al Dios de los hebreos",
+          "Que todo pueblo que dijera blasfemia contra el Dios de Sadrac, Mesac y Abed-nego fuera descuartizado",
+          "Que se destruyera la estatua de oro",
+          "Que Sadrac, Mesac y Abed-nego fueran los nuevos gobernadores de Babilonia"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 16,
+        "pregunta": "¿Qué hizo el rey con Sadrac, Mesac y Abed-nego después del milagro? (Daniel 3:30)",
+        "opciones": [
+          "Los envió de regreso a Judá",
+          "Los hizo sacerdotes del templo",
+          "Los engrandeció en la provincia de Babilonia",
+          "Los nombró capitanes del ejército"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 17,
+        "pregunta": "¿Qué instrumentos musicales se mencionan en la orden del rey? (Daniel 3:5)",
+        "opciones": [
+          "Bocina, flauta, cítara, arpa, salterio, zampoña y todo instrumento de música",
+          "Trompetas, címbalos, panderos y laúdes",
+          "Arpas, liras y trompetas solamente",
+          "Tambores, platillos y flautas"
+        ],
+        "correcta": 0
+      },
+      {
+        "id": 18,
+        "pregunta": "¿Cómo estaban vestidos Sadrac, Mesac y Abed-nego cuando los echaron al horno? (Daniel 3:21)",
+        "opciones": [
+          "Solo con sus túnicas",
+          "Con sus mantos, calzados, turbantes y vestidos",
+          "Desnudos como señal de humillación",
+          "Con armaduras de guerra"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 19,
+        "pregunta": "¿Qué dijo Nabucodonosor cuando vio a los cuatro hombres en el horno? (Daniel 3:24-25)",
+        "opciones": [
+          "¿No echaron a tres hombres atados dentro del fuego? Sin embargo, veo cuatro hombres sueltos",
+          "¡Son hechiceros que usan magia para no quemarse!",
+          "¡Apagad el fuego inmediatamente!",
+          "¡Abrid la puerta del horno para que salgan!"
+        ],
+        "correcta": 0
+      },
+      {
+        "id": 20,
+        "pregunta": "¿Cómo llamó Nabucodonosor a Sadrac, Mesac y Abed-nego cuando los llamó a salir del horno? (Daniel 3:26)",
+        "opciones": [
+          "Príncipes del fuego",
+          "Siervos del Dios Altísimo",
+          "Elegidos del cielo",
+          "Hijos de los dioses"
+        ],
+        "correcta": 1
+      }
+    ]
+  },
+  "4": {
+    "titulo": "Capítulo 4",
+    "subtitulo": "El árbol grande",
+    "preguntas": [
+      {
+        "id": 1,
+        "pregunta": "¿Cómo estaba Nabucodonosor cuando tuvo el sueño del árbol? (Daniel 4:4)",
+        "opciones": [
+          "Angustiado y en guerra",
+          "Tranquilo en su casa, floreciente en su palacio",
+          "En medio de una batalla",
+          "Ayunando en el templo"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 2,
+        "pregunta": "¿Qué le causó el sueño al rey Nabucodonosor? (Daniel 4:5)",
+        "opciones": [
+          "Lo alegró y lo llenó de esperanza",
+          "Lo espantó; las visiones de su cabeza lo turbaron",
+          "Lo hizo levantarse y orar toda la noche",
+          "No le causó ninguna emoción"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 3,
+        "pregunta": "¿Qué nombre tenía Daniel en el idioma babilónico? (Daniel 4:8)",
+        "opciones": [
+          "Mesac",
+          "Sadrac",
+          "Beltsasar",
+          "Abed-nego"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 4,
+        "pregunta": "¿Cómo describió el árbol del sueño su copa? (Daniel 4:11)",
+        "opciones": [
+          "La copa llegaba hasta el cielo y se le alcanzaba a ver desde todos los confines de la tierra",
+          "La copa era pequeña pero daba mucha sombra",
+          "La copa tenía flores de oro",
+          "La copa llegaba hasta las nubes del horizonte"
+        ],
+        "correcta": 0
+      },
+      {
+        "id": 5,
+        "pregunta": "¿Qué descendió del cielo en el sueño de Nabucodonosor? (Daniel 4:13)",
+        "opciones": [
+          "Un ángel con una espada de fuego",
+          "Un vigilante y santo",
+          "Una voz del Altísimo",
+          "Un pájaro gigante"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 6,
+        "pregunta": "¿Qué ordenó el ser celestial que se hiciera con el árbol? (Daniel 4:14)",
+        "opciones": [
+          "Que lo trasplantaran a otro lugar",
+          "Que lo regaran con agua del río",
+          "Que lo derribaran y cortaran sus ramas",
+          "Que lo protegieran con una valla de hierro"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 7,
+        "pregunta": "¿Por cuántos tiempos pasaría el juicio sobre Nabucodonosor según el sueño? (Daniel 4:16)",
+        "opciones": [
+          "Tres tiempos",
+          "Cinco tiempos",
+          "Siete tiempos",
+          "Doce tiempos"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 8,
+        "pregunta": "¿Cuánto tiempo estuvo en silencio Daniel antes de dar la interpretación? (Daniel 4:19)",
+        "opciones": [
+          "Un momento",
+          "Casi una hora",
+          "Toda una noche",
+          "Tres días"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 9,
+        "pregunta": "¿Qué representaba el árbol grande del sueño según Daniel? (Daniel 4:22)",
+        "opciones": [
+          "El reino de los medos y persas",
+          "El templo de Babilonia",
+          "El mismo Nabucodonosor",
+          "El reino eterno de Dios"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 10,
+        "pregunta": "¿Qué consejo le dio Daniel al rey al final de la interpretación? (Daniel 4:27)",
+        "opciones": [
+          "Que destruyera la estatua de oro",
+          "Que redimiera sus pecados con justicia y sus iniquidades haciendo misericordias con los oprimidos",
+          "Que se humillara ante el Dios de Israel",
+          "Que liberara a todos los cautivos de Judá"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 11,
+        "pregunta": "¿Cuántos meses después del sueño se cumplió la palabra sobre Nabucodonosor? (Daniel 4:29)",
+        "opciones": [
+          "Seis meses",
+          "Doce meses",
+          "Tres meses",
+          "Veinticuatro meses"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 12,
+        "pregunta": "¿Qué dijo Nabucodonosor mientras paseaba por el palacio real? (Daniel 4:30)",
+        "opciones": [
+          "¡Bendito sea el Dios del cielo por darme este reino!",
+          "¿No es ésta la gran Babilonia que yo edifiqué para casa real con la fuerza de mi poder?",
+          "¡Que todos adoren la estatua de oro que he levantado!",
+          "Hoy construiré un templo más grande que el de Jerusalén"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 13,
+        "pregunta": "¿Qué vino del cielo mientras Nabucodonosor hablaba con orgullo? (Daniel 4:31)",
+        "opciones": [
+          "Un rayo que lo derribó",
+          "Una paloma blanca",
+          "Una voz que le dijo que el reino le había sido quitado",
+          "Un ángel con una espada"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 14,
+        "pregunta": "¿Qué le pasó a Nabucodonosor al cumplirse la palabra? (Daniel 4:33)",
+        "opciones": [
+          "Fue encerrado en una cárcel de Babilonia",
+          "Fue echado de entre los hombres, comía hierba como los bueyes y su cuerpo se empapaba del rocío",
+          "Fue enviado al exilio en Persia",
+          "Murió y fue reemplazado por su hijo"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 15,
+        "pregunta": "¿Cómo creció el cabello de Nabucodonosor durante su juicio? (Daniel 4:33)",
+        "opciones": [
+          "Como lana de oveja",
+          "Como plumas de águila",
+          "Se le cayó todo el cabello",
+          "Como espinas de cactus"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 16,
+        "pregunta": "¿Qué hizo Nabucodonosor para que su razón le fuera devuelta? (Daniel 4:34)",
+        "opciones": [
+          "Oró al Dios de Daniel por tres días",
+          "Alzó sus ojos al cielo y bendijo al Altísimo",
+          "Se arrepintió ante todos sus príncipes",
+          "Ayunó por siete días"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 17,
+        "pregunta": "¿Qué fue añadido a Nabucodonosor cuando fue restablecido en su reino? (Daniel 4:36)",
+        "opciones": [
+          "Más riquezas y un ejército mayor",
+          "Mayor grandeza fue añadida",
+          "Un nuevo nombre de honor",
+          "Un nuevo palacio más grande"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 18,
+        "pregunta": "¿Qué declaró Nabucodonosor al final del capítulo sobre el Rey del cielo? (Daniel 4:37)",
+        "opciones": [
+          "Que era un Dios entre muchos dioses",
+          "Que todas sus obras son verdaderas, sus caminos justos y puede humillar a los que andan con soberbia",
+          "Que era más poderoso que todos los dioses de Babilonia",
+          "Que solo Daniel podía conocerlo"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 19,
+        "pregunta": "¿Qué propósito tenía el decreto de los vigilantes según el sueño? (Daniel 4:17)",
+        "opciones": [
+          "Para que los sabios de Babilonia supieran interpretar sueños",
+          "Para que conozcan los vivientes que el Altísimo gobierna el reino de los hombres",
+          "Para que Nabucodonosor fuera destruido para siempre",
+          "Para probar la lealtad de los tres jóvenes hebreos"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 20,
+        "pregunta": "¿Qué le dijo Daniel al rey sobre la cepa de las raíces del árbol? (Daniel 4:26)",
+        "opciones": [
+          "Que el reino sería dado a otro pueblo para siempre",
+          "Que el reino le quedaría firme después que reconociera que es el cielo el que gobierna",
+          "Que debía plantar un árbol nuevo en Babilonia",
+          "Que sus hijos heredarían el reino"
+        ],
+        "correcta": 1
+      }
+    ]
+  },
+  "5": {
+    "titulo": "Capítulo 5",
+    "subtitulo": "La escritura en la pared",
+    "preguntas": [
+      {
+        "id": 1,
+        "pregunta": "¿A cuántos de sus príncipes hizo el rey Belsasar un gran banquete? (Daniel 5:1)",
+        "opciones": [
+          "A cien",
+          "A quinientos",
+          "A mil",
+          "A trescientos"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 2,
+        "pregunta": "¿Qué mandó traer Belsasar con el gusto del vino? (Daniel 5:2)",
+        "opciones": [
+          "Más vino y manjares del palacio",
+          "Los vasos de oro y de plata que Nabucodonosor había traído del templo de Jerusalén",
+          "Los libros de los magos y adivinos",
+          "Las vestiduras reales de Nabucodonosor"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 3,
+        "pregunta": "¿A quiénes alabaron mientras bebían de los vasos del templo? (Daniel 5:4)",
+        "opciones": [
+          "Al Dios del cielo",
+          "A Nabucodonosor su padre",
+          "A los dioses de oro y plata, de bronce, de hierro, de madera y de piedra",
+          "Al rey Belsasar únicamente"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 4,
+        "pregunta": "¿Dónde apareció la mano que escribía? (Daniel 5:5)",
+        "opciones": [
+          "Sobre la mesa del banquete",
+          "Delante del candelabro, sobre lo encalado de la pared del palacio real",
+          "En el cielo sobre el palacio",
+          "En el suelo del salón del banquete"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 5,
+        "pregunta": "¿Qué le pasó al rey Belsasar al ver la mano que escribía? (Daniel 5:6)",
+        "opciones": [
+          "Se llenó de ira y llamó a sus soldados",
+          "Palideció, sus pensamientos lo turbaron, sus caderas se debilitaron y sus rodillas daban la una contra la otra",
+          "Se desmayó en su trono",
+          "Se alegró porque pensó que era una señal buena"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 6,
+        "pregunta": "¿Qué prometió el rey a quien leyera e interpretara la escritura? (Daniel 5:7)",
+        "opciones": [
+          "La mitad de su reino y su hija en matrimonio",
+          "Ser vestido de púrpura, llevar collar de oro y ser el tercer señor en el reino",
+          "Oro, plata y diez ciudades",
+          "Libertad y riquezas ilimitadas"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 7,
+        "pregunta": "¿Pudieron los sabios leer e interpretar la escritura? (Daniel 5:8)",
+        "opciones": [
+          "Sí, pero la interpretación era equivocada",
+          "No pudieron leer la escritura ni dar al rey su interpretación",
+          "Uno solo de ellos pudo leerla",
+          "La leyeron pero no la entendieron"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 8,
+        "pregunta": "¿Quién entró a la sala del banquete y habló al rey sobre Daniel? (Daniel 5:10)",
+        "opciones": [
+          "Arioc, el capitán de la guardia",
+          "Uno de los sátrapas del reino",
+          "La reina",
+          "El jefe de los magos"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 9,
+        "pregunta": "¿Cómo describió la reina a Daniel ante Belsasar? (Daniel 5:11)",
+        "opciones": [
+          "Como un hombre en el que mora el espíritu de los dioses santos, con luz, inteligencia y sabiduría",
+          "Como un simple esclavo de los judíos",
+          "Como el más sabio de todos los babilonios",
+          "Como un hombre que había engañado a Nabucodonosor"
+        ],
+        "correcta": 0
+      },
+      {
+        "id": 10,
+        "pregunta": "¿Qué le ofreció Belsasar a Daniel si interpretaba la escritura? (Daniel 5:16)",
+        "opciones": [
+          "El cargo de jefe de los eunucos",
+          "Ser vestido de púrpura, collar de oro y ser el tercer señor en el reino",
+          "La libertad de volver a Judá",
+          "Gobernar la ciudad de Babilonia"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 11,
+        "pregunta": "¿Qué dijo Daniel sobre los dones que Belsasar le ofreció? (Daniel 5:17)",
+        "opciones": [
+          "Que los aceptaba con gratitud",
+          "Que sus dones fueran para él y diera las recompensas a otros",
+          "Que los compartiría con sus compañeros",
+          "Que los usaría para ayudar a los cautivos de Judá"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 12,
+        "pregunta": "¿Qué le recriminó Daniel a Belsasar con respecto a Nabucodonosor? (Daniel 5:22)",
+        "opciones": [
+          "Que había destruido el templo de Jerusalén",
+          "Que no había humillado su corazón sabiendo todo lo que le pasó a Nabucodonosor",
+          "Que había matado a los sabios de Babilonia",
+          "Que no había liberado a los cautivos hebreos"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 13,
+        "pregunta": "¿Cuál era la escritura que apareció en la pared? (Daniel 5:25)",
+        "opciones": [
+          "Tekel, Uparsin, Mene",
+          "Mene, Mene, Tekel, Uparsin",
+          "Peres, Mene, Tekel",
+          "Uparsin, Tekel, Mene, Mene"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 14,
+        "pregunta": "¿Qué significaba 'Mene' según Daniel? (Daniel 5:26)",
+        "opciones": [
+          "Pesado has sido en balanza y hallado falto",
+          "Tu reino ha sido roto y dado a los medos y persas",
+          "Contó Dios tu reino y le ha puesto fin",
+          "El reino te ha sido quitado esta noche"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 15,
+        "pregunta": "¿Qué significaba 'Tekel' según Daniel? (Daniel 5:27)",
+        "opciones": [
+          "Contó Dios tu reino y le ha puesto fin",
+          "Pesado has sido en balanza y hallado falto",
+          "Tu reino ha sido dado a los medos y a los persas",
+          "Serás echado de entre los hombres"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 16,
+        "pregunta": "¿Qué significaba 'Peres' según Daniel? (Daniel 5:28)",
+        "opciones": [
+          "Contó Dios tu reino y le ha puesto fin",
+          "Pesado has sido en balanza",
+          "Tu reino ha sido roto y dado a los medos y a los persas",
+          "Morirás esta misma noche"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 17,
+        "pregunta": "¿Qué mandó Belsasar que le pusieran a Daniel después de la interpretación? (Daniel 5:29)",
+        "opciones": [
+          "Una corona de plata",
+          "Vestido de púrpura y un collar de oro",
+          "Una espada de oro",
+          "Vestiduras del sacerdocio"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 18,
+        "pregunta": "¿Qué le pasó a Belsasar esa misma noche? (Daniel 5:30)",
+        "opciones": [
+          "Fue depuesto y enviado al exilio",
+          "Fue muerto",
+          "Se arrepintió y adoró al Dios de Daniel",
+          "Huyó de Babilonia con su ejército"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 19,
+        "pregunta": "¿Quién tomó el reino después de la muerte de Belsasar? (Daniel 5:31)",
+        "opciones": [
+          "Ciro el Persa",
+          "El hijo de Belsasar",
+          "Darío de Media, cuando tenía sesenta y dos años",
+          "Nabónido de Babilonia"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 20,
+        "pregunta": "¿Contra quién se había ensoberbecido Belsasar según Daniel? (Daniel 5:23)",
+        "opciones": [
+          "Contra los sabios de Babilonia",
+          "Contra el pueblo hebreo",
+          "Contra el Señor del cielo",
+          "Contra los medos y persas"
+        ],
+        "correcta": 2
+      }
+    ]
+  },
+  "6": {
+    "titulo": "Capítulo 6",
+    "subtitulo": "El foso de los leones",
+    "preguntas": [
+      {
+        "id": 1,
+        "pregunta": "¿Cuántos sátrapas constituyó Darío sobre el reino? (Daniel 6:1)",
+        "opciones": [
+          "Sesenta",
+          "Cien",
+          "Ciento veinte",
+          "Ciento cincuenta"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 2,
+        "pregunta": "¿Cuántos gobernadores había sobre los sátrapas? (Daniel 6:2)",
+        "opciones": [
+          "Dos",
+          "Tres",
+          "Cuatro",
+          "Siete"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 3,
+        "pregunta": "¿Por qué los gobernadores y sátrapas no podían hallar ocasión para acusar a Daniel? (Daniel 6:4)",
+        "opciones": [
+          "Porque Daniel era amigo del rey",
+          "Porque era fiel y ningún error ni falta hallaron en él",
+          "Porque tenía guardias que lo protegían",
+          "Porque nunca salía del palacio"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 4,
+        "pregunta": "¿Dónde decidieron los enemigos de Daniel encontrar una acusación contra él? (Daniel 6:5)",
+        "opciones": [
+          "En sus cuentas del tesoro real",
+          "En su relación con los otros gobernadores",
+          "En algo relacionado con la ley de su Dios",
+          "En sus viajes fuera de Babilonia"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 5,
+        "pregunta": "¿Por cuántos días prohibía el edicto pedir favor a cualquier dios o persona que no fuera el rey? (Daniel 6:7)",
+        "opciones": [
+          "Diez días",
+          "Veinte días",
+          "Treinta días",
+          "Cuarenta días"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 6,
+        "pregunta": "¿Qué le pasaría a quien desobedeciera el edicto? (Daniel 6:7)",
+        "opciones": [
+          "Sería hecho pedazos",
+          "Sería echado en el horno de fuego ardiente",
+          "Sería echado en el foso de los leones",
+          "Sería desterrado del reino"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 7,
+        "pregunta": "¿Cuántas veces al día se arrodillaba Daniel y oraba hacia Jerusalén? (Daniel 6:10)",
+        "opciones": [
+          "Una vez",
+          "Dos veces",
+          "Tres veces",
+          "Siete veces"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 8,
+        "pregunta": "¿Qué hizo Daniel cuando supo que el edicto había sido firmado? (Daniel 6:10)",
+        "opciones": [
+          "Dejó de orar por miedo al rey",
+          "Entró en su casa, abrió las ventanas hacia Jerusalén y oró tres veces al día como acostumbraba",
+          "Huyó de Babilonia esa misma noche",
+          "Fue a hablar con el rey para pedirle que anulara el edicto"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 9,
+        "pregunta": "¿Cómo reaccionó el rey Darío cuando supo que Daniel había desobedecido el edicto? (Daniel 6:14)",
+        "opciones": [
+          "Se alegró de poder condenarlo",
+          "Le pesó en gran manera y procuró librar a Daniel hasta la puesta del sol",
+          "Lo llamó y lo perdonó de inmediato",
+          "Lo ignoró y firmó otro edicto"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 10,
+        "pregunta": "¿Qué le dijo el rey a Daniel antes de echarlo al foso? (Daniel 6:16)",
+        "opciones": [
+          "Que lo sentenciaba por haber desobedecido su ley",
+          "El Dios tuyo, a quien tú continuamente sirves, él te libre",
+          "Que esperaba que sus dioses lo salvaran",
+          "Que lamentaba no poder hacer nada por él"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 11,
+        "pregunta": "¿Qué se puso sobre la boca del foso después de meter a Daniel? (Daniel 6:17)",
+        "opciones": [
+          "Una puerta de hierro",
+          "Una piedra, que selló el rey con su anillo y con el anillo de sus príncipes",
+          "Una reja de bronce",
+          "Una cadena de oro"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 12,
+        "pregunta": "¿Cómo pasó la noche el rey Darío después de meter a Daniel al foso? (Daniel 6:18)",
+        "opciones": [
+          "Durmió tranquilamente confiando en los dioses",
+          "Se fue a un banquete para distraerse",
+          "No comió, no entraron instrumentos de música delante de él y el sueño se le fue",
+          "Oró al Dios de Daniel toda la noche"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 13,
+        "pregunta": "¿A qué hora fue el rey al foso de los leones para ver a Daniel? (Daniel 6:19)",
+        "opciones": [
+          "Al mediodía",
+          "Al anochecer",
+          "Al alba, muy de mañana",
+          "A media noche"
+        ],
+        "correcta": 2
+      },
+      {
+        "id": 14,
+        "pregunta": "¿Qué gritó el rey al acercarse al foso? (Daniel 6:20)",
+        "opciones": [
+          "¡Daniel, siervo del Dios viviente, el Dios a quien tú sirves continuamente, ¿te pudo librar de los leones?",
+          "¡Daniel, sal si aún estás vivo!",
+          "¡Daniel, profetiza si tu Dios es verdadero!",
+          "¡Daniel, ¿oyes la voz de tu rey?"
+        ],
+        "correcta": 0
+      },
+      {
+        "id": 15,
+        "pregunta": "¿Cómo explicó Daniel que no había sido lastimado? (Daniel 6:22)",
+        "opciones": [
+          "Que los leones estaban dormidos toda la noche",
+          "Mi Dios envió su ángel, el cual cerró la boca de los leones",
+          "Que Dios lo hizo invisible para los leones",
+          "Que los leones se asustaron de él"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 16,
+        "pregunta": "¿Qué se halló en Daniel después de sacarlo del foso? (Daniel 6:23)",
+        "opciones": [
+          "Algunas heridas menores",
+          "Estaba completamente ileso, ningún daño se halló en él",
+          "Tenía rasguños pero sobrevivió",
+          "Sus ropas estaban desgarradas por los leones"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 17,
+        "pregunta": "¿Qué le pasó a los hombres que acusaron a Daniel? (Daniel 6:24)",
+        "opciones": [
+          "Fueron desterrados del reino",
+          "Fueron echados en el foso de los leones junto con sus hijos y mujeres, y los leones los despedazaron",
+          "Fueron perdonados por el rey",
+          "Fueron puestos en prisión de por vida"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 18,
+        "pregunta": "¿Qué decreto promulgó Darío después del milagro? (Daniel 6:26)",
+        "opciones": [
+          "Que todos adoraran al Dios de Daniel en todo su reino",
+          "Que en todo el dominio de su reino todos temieran y temblaran ante la presencia del Dios de Daniel",
+          "Que Daniel fuera el único gobernador del reino",
+          "Que los judíos regresaran a Jerusalén"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 19,
+        "pregunta": "¿Cómo describió Darío al Dios de Daniel en su decreto? (Daniel 6:26)",
+        "opciones": [
+          "Como el más poderoso entre todos los dioses",
+          "Como el Dios viviente que permanece por todos los siglos, cuyo reino no será jamás destruido",
+          "Como el Dios que rescata a sus siervos de los peligros",
+          "Como el Dios de los hebreos que protege a su pueblo"
+        ],
+        "correcta": 1
+      },
+      {
+        "id": 20,
+        "pregunta": "¿Durante qué reinados fue prosperado Daniel según el final del capítulo? (Daniel 6:28)",
+        "opciones": [
+          "Durante los reinados de Nabucodonosor y Belsasar",
+          "Durante los reinados de Darío y de Ciro el Persa",
+          "Durante los reinados de Darío y Nabucodonosor",
+          "Durante los reinados de Ciro y Artajerjes"
+        ],
+        "correcta": 1
+      }
+    ]
+  }
+};
+
+const EGW_CAPITULOS = {
+  "1": { "titulo": "Capítulo 1 · EGW", "subtitulo": "En la corte de Babilonia", "preguntas": [
+    { "id":1, "pregunta": "¿Cómo describe EGW a los patriotas llevados cautivos a Babilonia?", "opciones": ["Hombres que cedieron ante el enemigo para sobrevivir","Hombres fieles a buenos principios como el acero","Hombres que adoraban en secreto para no ser descubiertos","Hombres que se enriquecieron gracias al cautiverio"] ,"correcta":1 },
+    { "id":2, "pregunta": "¿Qué propósito tenía Dios al permitir que esos hombres fueran a Babilonia?", "opciones": ["Castigarlos por la idolatría de sus padres","Darles riqueza y honor entre los paganos","Darles conocimiento de las ciencias caldeas","Darles el privilegio de representar a Jehová ante naciones paganas"] ,"correcta":3 },
+    { "id":3, "pregunta": "¿Por qué los babilonios mencionaban jactanciosamente los vasos del templo en sus dioses?", "opciones": ["Para demostrar la superioridad de su religión sobre la hebrea","Para intimidar a los cautivos y evitar rebeliones","Para honrar a Nabucodonosor por su conquista","Para recordarles a los hebreos que su Dios los había abandonado"] ,"correcta":0 },
+    { "id":4, "pregunta": "Según EGW, ¿qué habían inculcado los padres de Daniel a sus hijos?", "opciones": ["Habilidades para sobrevivir en tierras extranjeras","Amor a la sabiduría y las ciencias hebreas","Hábitos de estricta templanza y responsabilidad ante Dios","Estrategias para ganarse el favor de los gobernantes"] ,"correcta":2 },
+    { "id":5, "pregunta": "¿Por qué estaba prohibido para Daniel comer de la comida del rey?", "opciones": ["Porque tenía ingredientes impuros según la ley de Moisés","Porque estaba consagrada a los ídolos y comerla era rendir homenaje a dioses falsos","Porque el exceso de manjares dañaría su salud y sus facultades mentales","Porque el rey quería probar si los hebreos eran realmente fieles a su Dios"] ,"correcta":1 },
+    { "id":6, "pregunta": "¿Qué excusa plausible podría haber usado Daniel para comer del alimento real, según EGW?", "opciones": ["Que todos los demás jóvenes hebreos lo hacían sin problema","Que la ley hebrea no aplicaba fuera de la tierra de Israel","Que dependía del favor del rey y arriesgaba su vida si se negaba","Que Dios entendería dadas las circunstancias del cautiverio"] ,"correcta":2 },
+    { "id":7, "pregunta": "¿Cuántos días duró la prueba que propuso Daniel a Melsar?", "opciones": ["Siete días","Treinta días","Diez días","Cuarenta días"] ,"correcta":2 },
+    { "id":8, "pregunta": "¿Cuál fue el resultado visible de la prueba al terminar los días?", "opciones": ["Los hebreos eran iguales en aspecto a los demás muchachos","Los hebreos lucían más delgados pero con semblante más brillante","Los hebreos parecían mejor y más robustos que los que comían del rey","Los hebreos estaban débiles pero con mayor sabiduría"] ,"correcta":2 },
+    { "id":9, "pregunta": "Según EGW, ¿de qué historia conocían Daniel y sus compañeros el peligro del vino?", "opciones": ["De la historia de Sansón y su debilidad ante Dalila","De la historia de Nadab y Abihú y los resultados de su intemperancia","De la historia de Noé y su embriaguez después del diluvio","De la historia de Salomón y su caída por las mujeres extranjeras"] ,"correcta":1 },
+    { "id":10, "pregunta": "¿Qué don especial recibió Daniel además del conocimiento e inteligencia general?", "opciones": ["El don de hablar todas las lenguas de los caldeos","El don de sanar enfermos y hacer milagros","El don de entendimiento en toda visión y sueños","El don de interpretar los astros y los tiempos"] ,"correcta":2 },
+    { "id":11, "pregunta": "Según EGW, ¿cómo obtuvieron Daniel y sus compañeros su notable sabiduría?", "opciones": ["Por un talento natural superior al de los demás estudiantes","Relacionándose con la Fuente de toda sabiduría, orando y estudiando fielmente","Por el favor especial que les mostró el príncipe de los eunucos","Aprendiendo de los mejores magos y astrólogos de Babilonia"] ,"correcta":1 },
+    { "id":12, "pregunta": "¿En qué los halló el rey superiores al compararlos con todos sus sabios?", "opciones": ["Nueve veces mejores en fuerza y belleza física","Diez veces mejores que todos los magos y astrólogos del reino","Doce veces mejores en conocimiento de las letras caldeas","Siete veces mejores en la interpretación de sueños y visiones"] ,"correcta":1 },
+    { "id":13, "pregunta": "¿Qué dice EGW que es un carácter noble, en contraste con lo que muchos creen?", "opciones": ["El resultado del talento y los dones especiales que Dios otorga a pocos","El producto de la educación formal en las mejores escuelas del mundo","El resultado de la disciplina propia, la sujeción de lo inferior y la entrega a Dios","El fruto de las circunstancias favorables y las oportunidades que la vida ofrece"] ,"correcta":2 },
+    { "id":14, "pregunta": "Según EGW, ¿qué tipo de hombres se necesitan hoy como Daniel?", "opciones": ["Hombres pacíficos y diplomáticos que eviten todo conflicto innecesario","Hombres activos y audaces para la causa del bien, con corazones puros y valor intrépido","Hombres eruditos que conozcan las filosofías del mundo para refutarlas","Hombres ricos y poderosos que puedan financiar la obra de la iglesia"] ,"correcta":1 },
+    { "id":15, "pregunta": "¿Qué promesa de 1 Samuel 2:30 cita EGW como cumplida en los jóvenes hebreos?", "opciones": ["'Los que confían en Jehová tendrán nuevas fuerzas'","'El que persevere hasta el fin, ese será salvo'","'Yo honraré a los que me honran'","'Pediréis y recibiréis, para que vuestro gozo sea cumplido'"] ,"correcta":2 }
+  ]},
+  "2": { "titulo": "Capítulo 2 · EGW", "subtitulo": "El sueño de Nabucodonosor", "preguntas": [
+    { "id":1, "pregunta": "¿Por qué fue convocado Daniel ante Nabucodonosor después del decreto de muerte?", "opciones": ["Porque el rey lo reconoció como el más sabio de todos sus siervos","Porque la reina lo recomendó al rey como intérprete de sueños","Porque Daniel mismo pidió audiencia para salvar a los sabios","Porque Arioc lo llevó después de que Daniel preguntó la causa del decreto"] ,"correcta":3 },
+    { "id":2, "pregunta": "¿Qué exigió Nabucodonosor a sus sabios además de la interpretación del sueño?", "opciones": ["Que le dijeran quién le había enviado ese sueño de parte de los dioses","Que le revelaran el sueño mismo sin que él se los dijera","Que le mostraran cómo evitar que ese sueño se cumpliera","Que le describieran los reinos futuros que aparecían en la visión"] ,"correcta":1 },
+    { "id":3, "pregunta": "¿Cuándo fue revelado el sueño y su significado a Daniel?", "opciones": ["Durante la oración de la tarde junto al templo de Salomón","En visión de noche, después de orar con Ananías, Misael y Azarías","Mientras ayunaba cuarenta días en su cámara","En la presencia misma del rey, al momento de interpretarlo"] ,"correcta":1 },
+    { "id":4, "pregunta": "¿Cuál fue el primer acto de Daniel al recibir la revelación del sueño?", "opciones": ["Fue de inmediato a informar a Arioc para detener el decreto","Despertó a sus compañeros para contarles lo que Dios había revelado","Agradeció y alabó a Dios por haberle revelado el misterio","Escribió el sueño y su interpretación para no olvidar ningún detalle"] ,"correcta":2 },
+    { "id":5, "pregunta": "¿Qué representaba la cabeza de oro de la gran imagen según la interpretación de Daniel?", "opciones": ["El reino de Medo-Persia que sucedería a Babilonia","El reino eterno de Dios que destruiría a todos los demás","El propio Nabucodonosor y su reino de Babilonia","El reino de Grecia bajo Alejandro Magno"] ,"correcta":2 },
+    { "id":6, "pregunta": "¿Qué simbolizaba la piedra cortada no con manos que destruyó la imagen?", "opciones": ["El ejército de Ciro que conquistó Babilonia sin resistencia","El reino que Dios establecería y que jamás sería destruido ni dejado a otro pueblo","La restauración del pueblo de Israel a su tierra prometida","El juicio final que vendría sobre todas las naciones de la tierra"] ,"correcta":1 },
+    { "id":7, "pregunta": "¿Cómo reaccionó Nabucodonosor al escuchar la interpretación de Daniel?", "opciones": ["Se llenó de ira porque la profecía anunciaba la caída de su reino","Cayó sobre su rostro y reconoció al Dios de Daniel como Dios de dioses","Ordenó investigar si Daniel realmente había recibido esa revelación de un dios","Mandó recompensar a Daniel pero no cambió su adoración a los ídolos"] ,"correcta":1 },
+    { "id":8, "pregunta": "¿Qué cargo le dio el rey a Daniel después del episodio del sueño?", "opciones": ["Jefe de todos los ejércitos de la provincia de Babilonia","Intérprete oficial de todos los sueños y visiones del reino","Gobernador de toda la provincia de Babilonia y príncipe de los sabios","Sumo sacerdote de los dioses babilónicos por decreto real"] ,"correcta":2 },
+    { "id":9, "pregunta": "Según EGW, ¿qué buscaba Dios lograr al revelarle la profecía a Nabucodonosor?", "opciones": ["Que el rey destruyera todos los ídolos y adorara solo a Jehová","Que el rey sintiera su responsabilidad para con el Cielo y reconociera el poder de Dios","Que el rey liberara a los cautivos hebreos y los enviara de regreso a Jerusalén","Que el rey humillara a sus sabios y reconociera que eran falsos profetas"] ,"correcta":1 },
+    { "id":10, "pregunta": "¿Por qué dice EGW que los gobernantes babilónicos buscaban a hombres como Daniel?", "opciones": ["Porque Daniel conocía los secretos de los cielos mejor que ningún otro sabio","Porque Daniel era el más anciano y experimentado de todos los sabios del reino","Porque sabían que honraba al Dios viviente y era honrado por Él","Porque Daniel nunca se equivocaba en sus consejos políticos y militares"] ,"correcta":2 },
+    { "id":11, "pregunta": "Según EGW, ¿por qué cayó finalmente el reino de Babilonia?", "opciones": ["Por la debilidad militar frente a los ejércitos combinados de medos y persas","Porque sus gobernantes en tiempos de prosperidad se consideraron independientes de Dios","Por la traición de funcionarios corruptos que entregaron la ciudad al enemigo","Por el hambre y las sequías que devastaron sus territorios durante años"] ,"correcta":1 },
+    { "id":12, "pregunta": "¿Qué salvó a los sabios de Babilonia de morir por el decreto de Nabucodonosor?", "opciones": ["Sus propias súplicas desesperadas ante el trono del rey","La intercesión de la reina madre a favor de todos los sabios","La relación de Daniel con el Revelador de secretos, que iluminó el misterio","El hecho de que Arioc se negó a ejecutar el decreto hasta que consultaran a Daniel"] ,"correcta":2 },
+    { "id":13, "pregunta": "¿Qué cargos recibieron Sadrac, Mesac y Abed-nego después del episodio del sueño?", "opciones": ["Fueron nombrados capitanes del ejército real de Babilonia","Fueron puestos sobre los negocios de la provincia de Babilonia","Fueron designados intérpretes oficiales junto a Daniel en la corte","Fueron enviados como embajadores a las provincias conquistadas"] ,"correcta":1 },
+    { "id":14, "pregunta": "Según EGW, ¿qué reveló la visión de Ezequiel sobre el gobierno del mundo?", "opciones": ["Que los ángeles registran cada decisión de los reyes para el juicio final","Que Dios destruirá a los reinos malvados antes del establecimiento de su reino","Que por encima del juego de los intereses humanos, agentes divinos cumplen los designios de Dios","Que solo las naciones que obedecen a Dios pueden prosperar y sobrevivir al tiempo"] ,"correcta":2 },
+    { "id":15, "pregunta": "¿Cómo actuó Daniel ante el rey al presentar la interpretación del sueño?", "opciones": ["Con humildad exagerada, evitando mirar al rey directamente a los ojos","Rehusando aceptar los honores para sí y ensalzando a Dios como única fuente de sabiduría","Con confianza propia, presentándose como el único hombre capaz de revelar el misterio","Con temor visible, pidiendo perdón si su interpretación resultaba errónea"] ,"correcta":1 }
+  ]},
+  "3": { "titulo": "Capítulo 3 · EGW", "subtitulo": "El horno de fuego", "preguntas": [
+    { "id":1, "pregunta": "¿Qué idea llevó a Nabucodonosor a construir la gran imagen de oro?", "opciones": ["Una nueva visión nocturna que le ordenó levantar una imagen a sus dioses","Las palabras 'Tú eres aquella cabeza de oro' del sueño, unidas a su regreso a la idolatría","Una orden directa de los sacerdotes caldeos que querían aumentar su influencia","El deseo de superar las obras arquitectónicas de todos los reyes anteriores"] ,"correcta":1 },
+    { "id":2, "pregunta": "¿En qué se diferenciaba la imagen de Nabucodonosor de la que vio en el sueño?", "opciones": ["Era mucho más pequeña y estaba hecha de plata en lugar de oro","Estaba hecha completamente de oro, sin descenso de materiales de cabeza a pies","Tenía forma de árbol en lugar de forma humana como en el sueño original","Era idéntica al sueño pero estaba cubierta de piedras preciosas de colores"] ,"correcta":1 },
+    { "id":3, "pregunta": "Según EGW, ¿quién estaba detrás del plan de construir y adorar la imagen?", "opciones": ["Los sacerdotes caldeos que querían aumentar su poder político en el reino","Satanás, usando a hombres ambiciosos para estorbar el propósito divino en Babilonia","Los propios compañeros de Daniel que buscaban escalar posiciones en la corte","Los reyes vecinos que enviaron emisarios para corromper a los consejeros del rey"] ,"correcta":1 },
+    { "id":4, "pregunta": "¿Quiénes informaron al rey sobre la desobediencia de los tres hebreos?", "opciones": ["Los guardias personales del rey que los observaron durante la ceremonia","Daniel mismo, que no quería que sus amigos tuviesen problemas con el decreto","Sabios celosos de los honores que se habían concedido a los hebreos","El propio Aspenaz, que tenía miedo de ser culpado por su mala conducta"] ,"correcta":2 },
+    { "id":5, "pregunta": "¿Qué respondieron los tres hebreos sobre si Dios los libraría del horno?", "opciones": ["Que estaban seguros de que Dios los libraría porque eran justos ante sus ojos","Que Dios podía librarlos, pero que aunque no lo hiciera, tampoco adorarían la imagen","Que preferían morir antes que debatir con el rey sobre asuntos de adoración","Que dejarían la decisión en manos de Dios y acatarían lo que Él determinara"] ,"correcta":1 },
+    { "id":6, "pregunta": "¿Cuánto más calentó el rey el horno antes de echar a los hebreos?", "opciones": ["Tres veces más de lo que ardía normalmente para ese tipo de castigo","Cinco veces más, como señal de su ira particular contra los hebreos","Siete veces más que de costumbre, por su enojo sin límites","Diez veces más, para asegurarse de que no hubiera escapatoria posible"] ,"correcta":2 },
+    { "id":7, "pregunta": "¿Qué observó Nabucodonosor dentro del horno ardiente que lo llenó de asombro?", "opciones": ["Tres hombres caminando sin ningún daño visible en medio de las llamas","Cuatro varones sueltos, y el aspecto del cuarto era semejante a hijo de los dioses","Un ángel con espada de fuego apagando las llamas desde dentro del horno","Las llamas consumiendo las cuerdas pero respetando completamente los cuerpos"] ,"correcta":1 },
+    { "id":8, "pregunta": "¿Cómo sabía el rey qué aspecto tendría el Hijo de Dios, según EGW?", "opciones": ["Porque los antiguos textos caldeos describían la apariencia de los dioses celestiales","Porque los hebreos cautivos le habían hablado de Cristo, el Redentor que había de venir","Porque había tenido una visión anterior en la que vio al Dios de los hebreos","Porque reconoció la descripción que Daniel le había dado durante la interpretación del sueño"] ,"correcta":1 },
+    { "id":9, "pregunta": "¿Qué notaron los nobles y gobernadores al examinar a los tres hebreos al salir del horno?", "opciones": ["Que sus ropas estaban intactas pero sus cabellos habían sido quemados completamente","Que ninguna lesión había en ellos, ni cabello quemado, ni ropas dañadas, ni olor a fuego","Que sus ropas olían levemente a humo pero sus cuerpos estaban completamente intactos","Que parecían más jóvenes que antes, como si el fuego hubiera renovado sus fuerzas"] ,"correcta":1 },
+    { "id":10, "pregunta": "¿Qué decreto emitió Nabucodonosor después de presenciar el milagro del horno?", "opciones": ["Que todos los pueblos del reino adoraran al Dios de los hebreos o serían ejecutados","Que todo pueblo que dijera blasfemia contra el Dios de los hebreos sería descuartizado","Que Daniel y sus amigos serían los únicos sacerdotes del nuevo dios oficial del reino","Que los ídolos de Babilonia serían destruidos en honor al Dios que libra del fuego"] ,"correcta":1 },
+    { "id":11, "pregunta": "¿En qué se excedió Nabucodonosor con su decreto según EGW, a pesar de sus buenas intenciones?", "opciones": ["En prometer destruir a todos los que no adoraran a Jehová, lo cual Dios nunca ordena","En intentar obligar por ley a sus súbditos a confesar a Dios y mostrar la misma reverencia","En nombrar a los hebreos como los únicos gobernantes legítimos de todas las provincias","En proclamar que el Dios de los hebreos era superior a todos los dioses de las naciones"] ,"correcta":1 },
+    { "id":12, "pregunta": "¿Qué provocó que Nabucodonosor volviera a la idolatría después del episodio del sueño?", "opciones": ["La presión constante de los sacerdotes caldeos que amenazaron con revelar sus secretos","La prosperidad llenó su corazón de orgullo y dejó de honrar a Dios gradualmente","Una nueva visión que interpretó como una orden de sus dioses para retomar el culto","La influencia de sus esposas extranjeras que lo sedujeron de vuelta a la idolatría"] ,"correcta":1 },
+    { "id":13, "pregunta": "Según EGW, ¿qué relación establece entre el horno de fuego y el tiempo del fin?", "opciones": ["Que los creyentes del tiempo del fin serán literalmente arrojados al fuego como prueba final","Que la ira se despertará especialmente contra los que guardan el sábado del cuarto mandamiento","Que el fuego del horno representa el juicio purificador que vendrá sobre toda la iglesia","Que los conquistadores actuales vivirán experiencias idénticas a las de los tres hebreos"] ,"correcta":1 },
+    { "id":14, "pregunta": "¿Por qué dice EGW que Dios permitió que los hebreos fueran arrojados al horno?", "opciones": ["Para que sufrieran y así fortalecer aún más su fe y carácter ante las pruebas","Para que la derrota de los enemigos y la liberación de sus siervos fuera más completa","Para demostrar a Nabucodonosor que sus propias leyes no tenían ningún poder real","Para dar a los tres hebreos la oportunidad de mostrar su fe ante toda Babilonia"] ,"correcta":1 },
+    { "id":15, "pregunta": "¿Cómo se difundieron las noticias de la liberación milagrosa según EGW?", "opciones": ["Por mensajeros que el rey envió personalmente a cada provincia de su reino","Por los representantes de diversas naciones que habían sido invitados a la dedicación","Por los propios hebreos cautivos que contaron el milagro a todos sus conocidos","Por los magos caldeos que quedaron tan impresionados que lo proclamaron ellos mismos"] ,"correcta":1 }
+  ]},
+  "4": { "titulo": "Capítulo 4 · EGW", "subtitulo": "La verdadera grandeza", "preguntas": [
+    { "id":1, "pregunta": "¿Con qué propósito le dio Dios a Nabucodonosor el sueño del árbol, según EGW?", "opciones": ["Para revelarle el futuro de los reinos que dominarían después de Babilonia","Para advertirle del peligro de su orgullo y del lazo tendido para arruinarlo","Para mostrarle que Dios controla el destino de todos los reyes de la tierra","Para darle la oportunidad de arrepentirse públicamente ante todo su pueblo"] ,"correcta":1 },
+    { "id":2, "pregunta": "¿Qué representaba el árbol gigantesco que Nabucodonosor vio en su sueño?", "opciones": ["El reino de Babilonia que duraría para siempre según los dioses caldeos","La historia de todos los reinos mundiales desde Babilonia hasta el fin","El propio Nabucodonosor en su grandeza y dominio sobre las naciones","El árbol de la vida que aparecería en el reino eterno de Dios"] ,"correcta":2 },
+    { "id":3, "pregunta": "¿Cuál fue la primera reacción de Daniel al comprender el significado del sueño?", "opciones": ["Alabó a Dios por haberle dado sabiduría para entender el misterio tan difícil","Estuvo en silencio casi una hora, espantado por la visión y sus implicaciones","Pidió permiso al rey para no tener que interpretar ese sueño tan terrible","Le pidió al rey que se arrepintiera de inmediato antes de que el castigo llegara"] ,"correcta":1 },
+    { "id":4, "pregunta": "¿Qué consejo específico le dio Daniel a Nabucodonosor para evitar el castigo?", "opciones": ["Que destruyera todos los ídolos del reino y consagrara el templo a Jehová","Que liberara a todos los cautivos hebreos y los enviara de regreso a Jerusalén","Que redimiera sus pecados con justicia y sus iniquidades con misericordias con los pobres","Que ayunara cuarenta días y se humillara públicamente ante todo el pueblo"] ,"correcta":2 },
+    { "id":5, "pregunta": "¿Cuánto tiempo pasó entre la advertencia del sueño y el cumplimiento del castigo?", "opciones": ["Tres meses, hasta que el rey volvió a pecar abiertamente ante su pueblo","Siete meses, uno por cada tiempo que duraría su castigo de locura","Un año después de haber recibido la advertencia del sueño por Daniel","Cuarenta días, el mismo tiempo que duró el arrepentimiento de Nínive"] ,"correcta":2 },
+    { "id":6, "pregunta": "¿Qué estaba haciendo el rey cuando llegó la voz del cielo anunciando su castigo?", "opciones": ["Presidiendo una reunión de sus sabios para planificar nuevas conquistas militares","Adorando a sus dioses en el templo principal de Babilonia con gran ceremonia","Andaba en su palacio pensando con orgullo en su poder como gobernante y constructor","Celebrando una victoria militar con un gran banquete en honor de sus dioses"] ,"correcta":2 },
+    { "id":7, "pregunta": "¿Cuánto tiempo duró la locura de Nabucodonosor según el texto de EGW?", "opciones": ["Tres años, hasta que su hijo Belsasar pidió misericordia para él","Cuarenta días y cuarenta noches, como símbolo de prueba completa","Siete años, siendo la admiración y asombro de todos sus súbditos","Doce meses, equivalentes a los doce años de su reinado más próspero"] ,"correcta":2 },
+    { "id":8, "pregunta": "¿Qué hizo Nabucodonosor al término de los siete tiempos de su castigo?", "opciones": ["Convocó de inmediato a sus sabios para reclamar su trono y su reino","Alzó sus ojos al cielo, su razón le fue devuelta y bendijo al Altísimo","Buscó a Daniel para agradecerle que le hubiera advertido con tiempo","Huyó al desierto por vergüenza, incapaz de enfrentar a su propio pueblo"] ,"correcta":1 },
+    { "id":9, "pregunta": "¿Qué cambio de carácter describe EGW en Nabucodonosor tras su castigo?", "opciones": ["De rey intolerante pasó a ser un monarca neutral que respetaba todas las religiones","De orgulloso monarca pasó a ser humilde hijo de Dios y rey sabio y compasivo","De conquistador violento pasó a ser un gobernante pacífico que evitaba las guerras","De idólatra empedernido pasó a ser creyente formal que ordenó adorar a Jehová"] ,"correcta":1 },
+    { "id":10, "pregunta": "Según EGW, ¿en qué consiste la verdadera grandeza?", "opciones": ["En acumular riquezas y poder para beneficiar a los súbditos del reino","En conquistar muchas naciones y extender el dominio hasta los confines de la tierra","En ser verdaderamente buenos, resultado de la disciplina propia y la entrega a Dios","En ser reconocido por todas las naciones como el gobernante más justo del mundo"] ,"correcta":2 },
+    { "id":11, "pregunta": "¿Qué dice EGW sobre el poder que ejercen los gobernantes de la tierra?", "opciones": ["Que es enteramente de ellos mismos, producto de su esfuerzo y habilidades","Que es otorgado por el pueblo que los elige y puede ser revocado por el mismo pueblo","Que es impartido del Cielo, y del uso que hagan de él depende su éxito","Que es temporal e insignificante comparado con el poder eterno de Dios"] ,"correcta":2 },
+    { "id":12, "pregunta": "¿Qué afirma EGW sobre cada uno de los grandes reinos mundiales en la historia?", "opciones": ["Que todos cumplieron el propósito de Dios y por eso Él les permitió prosperar por siglos","Que ninguno reconoció al verdadero Dios y por eso todos fueron destruidos violentamente","Que cada uno tuvo su período de prueba, fracasó en sus deberes y su gloria desapareció","Que fueron establecidos por Dios para proteger al pueblo de Israel durante el cautiverio"] ,"correcta":2 },
+    { "id":13, "pregunta": "¿Cuál fue el último acto de Nabucodonosor registrado en la historia sagrada según EGW?", "opciones": ["La construcción de los jardines colgantes en honor a su esposa favorita","Una guerra de conquista que extendió su reino hasta las fronteras de Egipto","Una proclamación pública reconociendo la misericordia, bondad y autoridad de Dios","El nombramiento de Daniel como su sucesor y heredero del trono de Babilonia"] ,"correcta":2 },
+    { "id":14, "pregunta": "Según EGW, ¿qué determina la verdadera fortaleza de naciones e individuos?", "opciones": ["Las oportunidades y recursos que parecen hacerlos invencibles ante sus enemigos","La fidelidad con que cumplen el propósito de Dios, no su jactanciosa grandeza","El nivel de educación y cultura que han alcanzado a través de los siglos","Las alianzas estratégicas que establecen con otros reinos poderosos del mundo"] ,"correcta":1 },
+    { "id":15, "pregunta": "¿Qué causó que Nabucodonosor perdiera de vista el noble concepto del propósito de Dios?", "opciones": ["La influencia de sus consejeros paganos que le hablaban solo de conquistas militares","Su regreso al culto de los ídolos después del incidente del horno de fuego","La prosperidad que acompañaba su reinado, que llenó su corazón de orgullo","Los fracasos militares que lo frustraron y lo alejaron de la fe en cualquier dios"] ,"correcta":2 }
+  ]},
+  "5": { "titulo": "Capítulo 5 · EGW", "subtitulo": "El vigía invisible", "preguntas": [
+    { "id":1, "pregunta": "¿Cómo describe EGW la actitud de Belsasar hacia las lecciones de su abuelo Nabucodonosor?", "opciones": ["Las estudió cuidadosamente pero las aplicó de manera incorrecta en su reinado","Las respetó en público pero las ignoró en su vida privada y sus decisiones","Las pasaba por alto con indiferencia, malgastando sus oportunidades de conocer a Dios","Las desconocía completamente porque nadie en la corte se atrevió a contárselas"] ,"correcta":2 },
+    { "id":2, "pregunta": "¿Qué hecho agravaba especialmente la culpa de Belsasar según EGW?", "opciones": ["Haber atacado militarmente a Judá en venganza por la profecía de Daniel","Haber quemado los escritos sagrados de los profetas hebreos que estaban en Babilonia","Saber de la conversión y humillación de su abuelo y aun así ensalzar su corazón contra Dios","Haber exiliado a Daniel de la corte para no escuchar las advertencias del profeta"] ,"correcta":2 },
+    { "id":3, "pregunta": "¿Qué efecto tuvo la aparición de la mano sobre los asistentes al banquete?", "opciones": ["Huyeron despavoridos del salón, derribando mesas y candelabros en su pánico","La ruidosa alegría fue acallada y los dominó un terror sin nombre al ver la mano escribir","Cayeron todos de rodillas simultáneamente, creyendo que era una señal de sus dioses","Continuaron bebiendo para calmar el miedo, fingiendo que no habían visto nada"] ,"correcta":1 },
+    { "id":4, "pregunta": "¿Qué síntoma físico visible mostraba el terror de Belsasar ante la escritura?", "opciones": ["Perdió la voz completamente y no pudo hablar por varios minutos seguidos","Cayó desmayado de su trono y tuvo que ser sostenido por sus siervos","Las coyunturas de sus lomos se desataron y sus rodillas se batían la una con la otra","Comenzó a temblar tan violentamente que derramó su copa de vino al suelo"] ,"correcta":2 },
+    { "id":5, "pregunta": "¿Quién recordó a Belsasar la existencia de Daniel como intérprete de misterios?", "opciones": ["Uno de los príncipes que había escuchado historias sobre Daniel en su infancia","El jefe de los eunucos que lo conocía desde los tiempos de Nabucodonosor","La reina madre, que recordó cómo Daniel había revelado el sueño de la gran imagen","Un anciano caldeo que había sido testigo de los milagros de Dios en la corte"] ,"correcta":2 },
+    { "id":6, "pregunta": "¿Cómo actuó Daniel frente a las promesas de recompensa de Belsasar?", "opciones": ["Las aceptó agradecido, prometiendo que daría una interpretación fiel y honesta","Las rechazó y dijo que diera sus dones a otro, pero igualmente leería la escritura","Las ignoró completamente y procedió a interpretar sin mencionar las recompensas","Las condicionó a que el rey prometiera obedecer la voluntad de Dios tras la revelación"] ,"correcta":1 },
+    { "id":7, "pregunta": "¿Qué significaba la palabra MENE según la interpretación de Daniel?", "opciones": ["Tu reino ha sido dividido y entregado a tus enemigos que ya rodean la ciudad","Fuiste pesado en la balanza de la justicia divina y hallado completamente falto","Dios ha contado los días de tu reino y lo ha dado por terminado para siempre","Tu reino será roto en pedazos y distribuido entre los medos y los persas"] ,"correcta":2 },
+    { "id":8, "pregunta": "¿Qué significaba la palabra TEKEL en la interpretación de Daniel?", "opciones": ["Que los días de su reino estaban contados y próximos a terminar definitivamente","Que fue pesado en balanza y hallado falto ante el juicio de Dios","Que su reino sería partido y entregado a los reinos de medos y persas","Que Dios había rechazado su arrepentimiento por ser demasiado tardío"] ,"correcta":1 },
+    { "id":9, "pregunta": "¿Cómo lograron los ejércitos de Ciro entrar a la ciudad de Babilonia?", "opciones": ["Escalaron las murallas en la oscuridad mientras los guardias dormían ebrios","Sobornaron a los generales babilónicos para que abrieran las puertas de la ciudad","Desviaron las aguas del Éufrates y penetraron por el lecho del río hasta el interior","Usaron máquinas de asalto que destruyeron las puertas de bronce de la ciudad"] ,"correcta":2 },
+    { "id":10, "pregunta": "¿Cuándo ocurrió la muerte de Belsasar según el texto de EGW?", "opciones": ["Al amanecer del día siguiente al banquete, cuando los persas tomaron el palacio","Tres días después de que Daniel interpretó la escritura en la pared del salón","La misma noche del banquete, mientras todavía estaba en el salón de fiestas","Una semana después, al intentar escapar de la ciudad ya tomada por el enemigo"] ,"correcta":2 },
+    { "id":11, "pregunta": "Según EGW, ¿qué propósito tenía Dios con cada nación que subió al escenario de la historia?", "opciones": ["Usarlas como instrumentos para castigar al pueblo de Israel cuando se rebelaba","Permitirles prosperar para que demostraran que sin Dios ningún reino puede sobrevivir","Darle a cada una su lugar y período de prueba para ver si cumpliría sus propósitos","Establecerlas como protectores temporales de su pueblo durante los tiempos de cautiverio"] ,"correcta":2 },
+    { "id":12, "pregunta": "¿Qué reveló la visión de Ezequiel sobre el gobierno del mundo, según EGW?", "opciones": ["Que los ángeles registran cada acto de los reyes para el gran juicio final","Que un poder señoreador rige los asuntos de los gobernantes, ilustrado con ruedas y seres vivientes","Que Dios interviene directamente en cada batalla para determinar su resultado","Que solo las naciones que obedecen la ley de Dios pueden prosperar por mucho tiempo"] ,"correcta":1 },
+    { "id":13, "pregunta": "¿Por qué no podía Belsasar leer la escritura ardiente en la pared, según EGW?", "opciones": ["Porque estaba demasiado ebrio para enfocar su vista en los caracteres luminosos","Porque la escritura estaba en un idioma que ningún hombre en Babilonia conocía","Porque encerraban un secreto de poder que le era imposible comprender o contradecir","Porque el miedo lo paralizó completamente y no podía acercarse a la pared"] ,"correcta":2 },
+    { "id":14, "pregunta": "¿Qué dice EGW sobre la Biblia en relación con los grandes eventos finales del mundo?", "opciones": ["Que debe leerse junto a los escritos de los profetas modernos para entenderse bien","Que la Biblia y solo la Biblia presenta una visión correcta de estas cosas","Que sus profecías más importantes ya se cumplieron y no tienen aplicación futura","Que debe combinarse con la filosofía y la historia para comprender su mensaje profético"] ,"correcta":1 },
+    { "id":15, "pregunta": "¿Cuándo reprendió Daniel al rey Belsasar durante la interpretación?", "opciones": ["Al principio, antes de revelar el significado de las palabras escritas en la pared","Solo al final, después de haber interpretado todas las palabras de la escritura","Después de recordarle las experiencias de Nabucodonosor y antes de revelar la interpretación","No lo reprendió, solo interpretó las palabras y dejó que el rey sacara sus conclusiones"] ,"correcta":2 }
+  ]},
+  "6": { "titulo": "Capítulo 6 · EGW", "subtitulo": "En el foso de los leones", "preguntas": [
+    { "id":1, "pregunta": "¿Por qué buscaron los presidentes y príncipes una ocasión para acusar a Daniel?", "opciones": ["Porque Daniel había cometido errores graves en la administración de la provincia","Porque los honores otorgados a Daniel despertaron envidia y celos entre ellos","Porque Daniel había desafiado públicamente algunas de sus decisiones administrativas","Porque el rey les había ordenado investigar a todos sus funcionarios principales"] ,"correcta":1 },
+    { "id":2, "pregunta": "¿Qué conclusión llegaron los enemigos de Daniel al no poder encontrar falta en él?", "opciones": ["Que tendrían que fabricar evidencia falsa en su contra para acusarlo","Que necesitaban sobornar a algún testigo para que testificara en su contra","Que solo podían encontrar ocasión contra él en relación a la ley de su Dios","Que deberían esperar a que Daniel cometiera algún error en su cargo oficial"] ,"correcta":2 },
+    { "id":3, "pregunta": "¿Cómo convencieron los conspiradores al rey Darío de firmar el decreto?", "opciones": ["Argumentando que era necesario para mantener la unidad política del reino","Apelando a su vanidad, convenciéndolo de que el decreto acrecentaría su honor","Amenazándolo veladamente con revelar secretos que lo comprometían políticamente","Presentando el decreto como una medida temporal de solo siete días de duración"] ,"correcta":1 },
+    { "id":4, "pregunta": "¿Qué cambio hizo Daniel en su rutina de oración al enterarse del decreto?", "opciones": ["Comenzó a orar en secreto, con las ventanas cerradas para no ser descubierto","Redujo sus oraciones a una sola vez al día para no violar abiertamente el decreto","No cambió absolutamente nada; siguió orando tres veces al día con las ventanas abiertas","Pidió a sus amigos que oraran en su lugar para no comprometer su posición"] ,"correcta":2 },
+    { "id":5, "pregunta": "Según EGW, ¿qué principio declaró Daniel con su actitud de oración pública?", "opciones": ["Que los creyentes deben obedecer a Dios antes que a los hombres en toda circunstancia","Que ninguna potencia terrenal tiene derecho a interponerse entre el alma y Dios","Que la oración pública es más poderosa que la oración secreta ante los ojos de Dios","Que los siervos de Dios deben estar dispuestos a morir antes que comprometer su fe"] ,"correcta":1 },
+    { "id":6, "pregunta": "¿Cuál fue la reacción del rey Darío al descubrir que Daniel había violado el decreto?", "opciones": ["Se alegró en secreto, esperando que el Dios de Daniel lo librara del castigo merecido","Inmediatamente ordenó su arresto y lo hizo llevar al foso sin más deliberación","Le pesó en gran manera y trabajó hasta la puesta del sol buscando cómo librarlo","Convocó a todos sus consejeros para encontrar algún precedente legal que lo salvara"] ,"correcta":2 },
+    { "id":7, "pregunta": "¿Qué palabras le dirigió el rey Darío a Daniel al arrojarlo al foso de los leones?", "opciones": ["'Que tu Dios, en quien has confiado toda tu vida, te recompense ahora con su poder'","'El Dios tuyo, a quien tú continuamente sirves, él te libre de las garras de los leones'","'Si tu Dios es tan poderoso como dices, que demuestre ahora su poder y te salve'","'Te pido perdón, Daniel; la ley me obliga, pero mi corazón espera que seas librado'"] ,"correcta":1 },
+    { "id":8, "pregunta": "¿Cómo pasó el rey Darío la noche después de enviar a Daniel al foso?", "opciones": ["Durmió tranquilamente, confiando en que el Dios de Daniel lo libraría sin duda","Ayunó, no dejó entrar músicos y el sueño se alejó de él durante toda la noche","Festejó en privado con sus consejeros más cercanos, aliviado de que el problema se resolvió","Pasó la noche orando a sus propios dioses para que mostraran compasión con Daniel"] ,"correcta":1 },
+    { "id":9, "pregunta": "¿Qué le respondió Daniel al rey cuando le preguntó si su Dios lo había librado?", "opciones": ["Que los leones reconocieron la justicia de su causa y se negaron a atacarlo","Que el ayuno del rey había intercedido ante Dios y por eso fue librado de los leones","Que Dios envió su ángel que cerró la boca de los leones porque fue hallado inocente","Que su fe había creado una barrera invisible que los leones no podían traspasar"] ,"correcta":2 },
+    { "id":10, "pregunta": "¿Cuál fue el destino de los acusadores de Daniel después de su liberación?", "opciones": ["Fueron exiliados de Babilonia con sus familias y despojados de todos sus bienes","Fueron condenados a trabajos forzados en las minas del reino por el resto de su vida","Fueron echados al foso de los leones con sus familias y los leones los quebrantaron","Fueron perdonados por el rey a ruego de Daniel, quien intercedió generosamente por ellos"] ,"correcta":2 },
+    { "id":11, "pregunta": "¿Qué proclamó el rey Darío sobre el Dios de Daniel en su decreto posterior?", "opciones": ["Que el Dios de Daniel sería el dios oficial del reino y todos debían adorarlo","Que en todo su señorío todos temieran y temblaran del Dios de Daniel, el Dios viviente y permanente","Que los hebreos tendrían libertad de adorar a su Dios sin que nadie los perturbara","Que Daniel sería nombrado sumo sacerdote del Dios viviente en todo el reino"] ,"correcta":1 },
+    { "id":12, "pregunta": "Según EGW, ¿por qué Dios permitió que Daniel fuera realmente echado al foso?", "opciones": ["Para probar la fe de Daniel y confirmar que era digno de las revelaciones que había recibido","Para mostrar a los medos y persas que sus leyes eran inferiores a la ley de Dios","Para que la liberación fuera más admirable y la derrota de los enemigos más completa","Para demostrar al rey Darío que su decreto había sido injusto e irresponsable"] ,"correcta":2 },
+    { "id":13, "pregunta": "¿Qué compara EGW entre Daniel en el foso y Daniel en la corte del rey?", "opciones": ["Que en el foso mostró una valentía superior a la que había demostrado en la corte","Que en el foso fue el mismo hombre que ante el rey como estadista y profeta del Altísimo","Que la prueba del foso lo hizo más sabio y espiritual de lo que había sido antes","Que el foso reveló una dimensión de su fe que nadie había conocido hasta ese momento"] ,"correcta":1 },
+    { "id":14, "pregunta": "Según EGW, ¿qué enseña la vida de Daniel como estadista sobre el hombre de negocios creyente?", "opciones": ["Que los creyentes deben evitar los puestos políticos para no comprometer su fe","Que un hombre de negocios puede ser instruido por Dios a cada paso y ser intachable","Que Daniel fue una excepción única que no puede repetirse en el mundo moderno","Que el éxito en los negocios solo es posible si uno sacrifica algunos principios religiosos"] ,"correcta":1 },
+    { "id":15, "pregunta": "¿Qué afirma EGW sobre la proximidad del cielo a los que sufren por causa de la justicia?", "opciones": ["Que Dios los observa desde lejos pero espera que terminen su prueba solos","Que el cielo está muy cerca y Cristo se identifica con sus intereses y sufre con ellos","Que los ángeles les dan fuerzas invisibles pero no interfieren directamente en su sufrimiento","Que la recompensa celestial compensa todo sufrimiento aunque Dios parezca estar ausente"] ,"correcta":1 }
+  ]}
+};
+
+const ROMANOS = { 1:'I', 2:'II', 3:'III', 4:'IV', 5:'V', 6:'VI' };
+const LETRAS = ['A','B','C','D'];
+
+function getCapFromURL() {
+  const c = parseInt(localStorage.getItem('cap'));
+  return (c >= 1 && c <= 6) ? c : 1;
+}
+
+function getModeFromStorage() {
+  return localStorage.getItem('mode') === 'egw' ? 'egw' : 'daniel';
+}
+
+function shuffle(arr) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
+let capNum, preguntas, current, score, answered, currentShuffled;
+let timerInterval = null, timeLeft = 20;
+
+function initCap() {
+  capNum = getCapFromURL();
+  const mode = getModeFromStorage();
+  const roman = ROMANOS[capNum];
+
+  // Choose data source
+  const banco = mode === 'egw' ? EGW_CAPITULOS : CAPITULOS;
+  const cap = banco[capNum];
+
+  const modeLabel = mode === 'egw' ? 'EGW' : 'Daniel';
+  document.getElementById('topbar-cap').textContent = modeLabel + ' · Capítulo ' + roman;
+  document.getElementById('countdown-chapter').textContent = modeLabel + ' · Capítulo ' + roman;
+  document.getElementById('results-title').textContent = modeLabel + ' · Capítulo ' + roman;
+  preguntas = shuffle(cap.preguntas);
+  current = 0; score = 0; answered = false;
+}
+
+function loadQuestion() {
+  answered = false;
+  const q = preguntas[current];
+  const total = preguntas.length;
+  document.getElementById('q-label').textContent = 'Pregunta ' + (current + 1);
+  document.getElementById('q-text').textContent = q.pregunta;
+  document.getElementById('progress-label').textContent = 'Pregunta ' + (current + 1) + ' de ' + total;
+  document.getElementById('score-label').textContent = score + ' correcta' + (score !== 1 ? 's' : '');
+  document.getElementById('progress-fill').style.width = ((current / total) * 100) + '%';
+
+  const correctText = q.opciones[q.correcta];
+  const shuffled = shuffle(q.opciones);
+  currentShuffled = shuffled;
+  const newCorrectIdx = shuffled.indexOf(correctText);
+
+  const optionsEl = document.getElementById('options');
+  optionsEl.innerHTML = '';
+  shuffled.forEach((opt, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'opt-btn';
+    btn.innerHTML = '<span class="opt-letter">' + LETRAS[i] + '</span><span class="opt-text">' + opt + '</span>';
+    btn.onclick = () => selectAnswer(i, newCorrectIdx);
+    optionsEl.appendChild(btn);
+  });
+
+  document.getElementById('feedback').className = 'feedback';
+  document.getElementById('next-btn').classList.remove('visible');
+  document.getElementById('next-btn').textContent = current === preguntas.length - 1 ? 'Ver resultado →' : 'Siguiente pregunta →';
+
+  const card = document.getElementById('q-card');
+  card.style.animation = 'none'; card.offsetHeight; card.style.animation = '';
+
+  startTimer();
+}
+
+function startTimer() {
+  clearInterval(timerInterval);
+  timeLeft = 20;
+  const fill = document.getElementById('timer-fill');
+  const num = document.getElementById('timer-num');
+  fill.style.width = '100%';
+  fill.classList.remove('warning');
+  num.classList.remove('warning');
+  num.textContent = '20';
+
+  timerInterval = setInterval(() => {
+    timeLeft--;
+    fill.style.width = ((timeLeft / 20) * 100) + '%';
+    num.textContent = timeLeft;
+    if (timeLeft <= 7) { fill.classList.add('warning'); num.classList.add('warning'); }
+    if (timeLeft <= 0) {
+      clearInterval(timerInterval);
+      if (!answered) {
+        const btns = document.querySelectorAll('.opt-btn');
+        btns.forEach(b => b.disabled = true);
+        const correctIdx = currentShuffled.indexOf(preguntas[current].opciones[preguntas[current].correcta]);
+        btns[correctIdx].classList.add('reveal-correct');
+        const fb = document.getElementById('feedback');
+        fb.textContent = '⏱ Tiempo agotado. La respuesta correcta era: ' + currentShuffled[correctIdx];
+        fb.className = 'feedback wrong-fb';
+        answered = true;
+        document.getElementById('next-btn').classList.add('visible');
+      }
+    }
+  }, 1000);
+}
+
+function selectAnswer(chosen, correct) {
+  if (answered) return;
+  answered = true;
+  clearInterval(timerInterval);
+  const btns = document.querySelectorAll('.opt-btn');
+  btns.forEach(b => b.disabled = true);
+  const fb = document.getElementById('feedback');
+  if (chosen === correct) {
+    btns[chosen].classList.add('correct');
+    fb.textContent = '✓ ¡Correcto!';
+    fb.className = 'feedback correct-fb';
+    score++;
+  } else {
+    btns[chosen].classList.add('wrong');
+    btns[correct].classList.add('reveal-correct');
+    fb.textContent = '✗ Incorrecto. La respuesta correcta es: ' + currentShuffled[correct];
+    fb.className = 'feedback wrong-fb';
+  }
+  document.getElementById('score-label').textContent = score + ' correcta' + (score !== 1 ? 's' : '');
+  document.getElementById('next-btn').classList.add('visible');
+}
+
+function nextQuestion() {
+  current++;
+  if (current >= preguntas.length) showResults();
+  else loadQuestion();
+}
+
+function showResults() {
+  clearInterval(timerInterval);
+  document.getElementById('quiz-page').style.display = 'none';
+  document.getElementById('results-screen').classList.add('visible');
+  const total = preguntas.length;
+  const pct = Math.round((score / total) * 100);
+  document.getElementById('results-score').textContent = score + '/' + total;
+  document.getElementById('results-sub').textContent = pct + '% de respuestas correctas';
+  let msg = '';
+  if (pct === 100) msg = '¡Perfecto! Dominas el capítulo por completo. Excelente preparación.';
+  else if (pct >= 80) msg = 'Muy bien. Tienes un sólido conocimiento del capítulo. Repasa las preguntas que fallaste.';
+  else if (pct >= 60) msg = 'Bien, pero hay margen para mejorar. Te recomendamos releer el capítulo y volver a intentarlo.';
+  else msg = 'Necesitas reforzar este capítulo. No te desanimes, ¡vuelve a intentarlo!';
+  document.getElementById('results-message').textContent = msg;
+}
+
+function restartQuiz() {
+  document.getElementById('results-screen').classList.remove('visible');
+  document.getElementById('quiz-page').style.display = 'flex';
+  initCap();
+  loadQuestion();
+}
+
+function startCountdown() {
+  initCap();
+  let n = 5;
+  const numEl = document.getElementById('countdown-num');
+  const overlay = document.getElementById('countdown-overlay');
+  numEl.classList.add('tick');
+  setTimeout(() => numEl.classList.remove('tick'), 400);
+  const interval = setInterval(() => {
+    n--;
+    if (n <= 0) {
+      clearInterval(interval);
+      overlay.classList.add('hiding');
+      setTimeout(() => {
+        overlay.style.display = 'none';
+        document.getElementById('quiz-page').classList.add('visible');
+        loadQuestion();
+      }, 600);
+    } else {
+      numEl.textContent = n;
+      numEl.classList.add('tick');
+      setTimeout(() => numEl.classList.remove('tick'), 400);
+    }
+  }, 1000);
+}
+
+window.addEventListener('DOMContentLoaded', startCountdown);
+</script>
+</body>
+</html>
